@@ -1,0 +1,176 @@
+version: '3.8'
+
+services:
+  # ----------------------------------------
+  # Zookeeper
+  # ----------------------------------------
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+
+  # ----------------------------------------
+  # Kafka
+  # ----------------------------------------
+  kafka:
+    image: confluentinc/cp-kafka:7.3.0
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ZOOKEEPER_SESSION_TIMEOUT_MS: 40000
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_LOG_SEGMENT_BYTES: 536870912
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_NUM_PARTITIONS: 1
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+
+  # ----------------------------------------
+  # Retail App (Monolith for now)
+  # ----------------------------------------
+  retail-app:
+    build: .
+    container_name: retail-spring-app
+    ports:
+      - "8080:8080"
+    depends_on:
+      - retail-db
+      - kafka
+      - redis
+      - payment-service
+    env_file:
+      - .env
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+
+      SPRING_DATASOURCE_URL: jdbc:postgresql://retail-db:5432/retail_db
+      SPRING_DATASOURCE_USERNAME: user
+      SPRING_DATASOURCE_PASSWORD: password
+
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_CACHE_TYPE: redis
+
+      # NEW: internal URL to the payment microservice (container-to-container)
+      PAYMENT_SERVICE_URL: http://payment-service:8082
+
+  # ----------------------------------------
+  # Retail Database
+  # ----------------------------------------
+  retail-db:
+    image: postgres:14-alpine
+    container_name: retail-postgres-db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: retail_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # ----------------------------------------
+  # Payment Database (NEW)
+  # ----------------------------------------
+  payment-db:
+    image: postgres:14-alpine
+    container_name: payment-postgres-db
+    environment:
+      POSTGRES_USER: payment_user
+      POSTGRES_PASSWORD: payment_password
+      POSTGRES_DB: payment_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - payment_postgres_data:/var/lib/postgresql/data
+
+  # ----------------------------------------
+  # Payment Service (NEW)
+  # ----------------------------------------
+  payment-service:
+    # adjust if your payment-service is in another folder
+    build: ../payment-service
+    container_name: payment-service
+    ports:
+      - "8082:8082"
+    depends_on:
+      - payment-db
+      - kafka
+    env_file:
+      - .env
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+
+      # Payment DB
+      SPRING_DATASOURCE_URL: jdbc:postgresql://payment-db:5432/payment_db
+      SPRING_DATASOURCE_USERNAME: payment_user
+      SPRING_DATASOURCE_PASSWORD: payment_password
+
+      # Kafka (optional if you publish events)
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+
+      # Stripe secrets can live here now
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+
+      # Optional: if payment service validates JWT later
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+
+      # Make sure server runs on 8082 (also set in application.yml)
+      SERVER_PORT: 8082
+
+  # ----------------------------------------
+  # Redis
+  # ----------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: retail-redis
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+
+  # ----------------------------------------
+  # Monitoring
+  # ----------------------------------------
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    depends_on:
+      - retail-app
+      - payment-service
+
+  grafana:
+    image: grafana/grafana:10.0.0
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
+volumes:
+  postgres_data:
+  payment_postgres_data:
+  kafka_data:
+  redis_data:
