@@ -65,6 +65,43 @@ services:
       SPRING_CONFIG_IMPORT: configserver:http://config-server:8888
 
   # ----------------------------------------
+  # Customer Database
+  # ----------------------------------------
+  customer-db:
+    image: postgres:14-alpine
+    container_name: customer-postgres-db
+    environment:
+      POSTGRES_USER: customer_user
+      POSTGRES_PASSWORD: customer_password
+      POSTGRES_DB: customer_db
+    ports:
+      - "5435:5432"
+    volumes:
+      - customer_postgres_data:/var/lib/postgresql/data
+
+  # ----------------------------------------
+  # Customer Service
+  # ----------------------------------------
+  customer-service:
+    build: ./services/customer-service
+    container_name: customer-service
+    ports:
+      - "8083:8083"
+    depends_on:
+      config-server:
+        condition: service_healthy
+      customer-db:
+        condition: service_started
+    environment:
+      SPRING_CONFIG_IMPORT: configserver:http://config-server:8888
+      SPRING_DATASOURCE_URL: jdbc:postgresql://customer-db:5432/customer_db
+      SPRING_DATASOURCE_USERNAME: customer_user
+      SPRING_DATASOURCE_PASSWORD: customer_password
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      EUREKA_HOST: discovery
+      SERVER_PORT: 8083
+
+  # ----------------------------------------
   # Payment Database
   # ----------------------------------------
   payment-db:
@@ -185,5 +222,6 @@ services:
 volumes:
   postgres_data:
   payment_postgres_data:
+  customer_postgres_data:
   kafka_data:
   redis_data:
