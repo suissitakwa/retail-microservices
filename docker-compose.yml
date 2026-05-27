@@ -37,38 +37,71 @@ services:
       - kafka_data:/var/lib/kafka/data
 
   # ----------------------------------------
-  # Retail App (Monolith for now)
+  # Config Server (startup order: 1st)
   # ----------------------------------------
-  retail-app:
-    build: .
-    container_name: retail-spring-app
+  config-server:
+    build: ./services/config-server
+    container_name: config-server
     ports:
-      - "8080:8080"
+      - "8888:8888"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------
+  # Discovery / Eureka (startup order: 2nd)
+  # ----------------------------------------
+  discovery:
+    build: ./services/discovery
+    container_name: discovery
+    ports:
+      - "8761:8761"
     depends_on:
-      - retail-db
-      - kafka
-      - redis
-      - payment-service
-    env_file:
-      - .env
+      config-server:
+        condition: service_healthy
     environment:
-      SPRING_PROFILES_ACTIVE: dev
-      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
-      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      SPRING_CONFIG_IMPORT: configserver:http://config-server:8888
 
-      SPRING_DATASOURCE_URL: jdbc:postgresql://retail-db:5432/retail_db
-      SPRING_DATASOURCE_USERNAME: user
-      SPRING_DATASOURCE_PASSWORD: password
+  # ----------------------------------------
+  # Payment Database
+  # ----------------------------------------
+  payment-db:
+    image: postgres:14-alpine
+    container_name: payment-postgres-db
+    environment:
+      POSTGRES_USER: payment_user
+      POSTGRES_PASSWORD: payment_password
+      POSTGRES_DB: payment_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - payment_postgres_data:/var/lib/postgresql/data
 
+  # ----------------------------------------
+  # Payment Service (startup order: 3rd)
+  # ----------------------------------------
+  payment-service:
+    build: ./services/payment-service
+    container_name: payment-service
+    ports:
+      - "8082:8082"
+    depends_on:
+      config-server:
+        condition: service_healthy
+      payment-db:
+        condition: service_started
+      kafka:
+        condition: service_started
+    environment:
+      SPRING_CONFIG_IMPORT: configserver:http://config-server:8888
+      SPRING_DATASOURCE_URL: jdbc:postgresql://payment-db:5432/payment_db
+      SPRING_DATASOURCE_USERNAME: payment_user
+      SPRING_DATASOURCE_PASSWORD: payment_password
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_DATA_REDIS_PORT: 6379
-      SPRING_CACHE_TYPE: redis
-
-      # NEW: internal URL to the payment microservice (container-to-container)
-      PAYMENT_SERVICE_URL: http://payment-service:8082
+      EUREKA_HOST: discovery
+      SERVER_PORT: 8082
 
   # ----------------------------------------
   # Retail Database
@@ -86,56 +119,6 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
   # ----------------------------------------
-  # Payment Database (NEW)
-  # ----------------------------------------
-  payment-db:
-    image: postgres:14-alpine
-    container_name: payment-postgres-db
-    environment:
-      POSTGRES_USER: payment_user
-      POSTGRES_PASSWORD: payment_password
-      POSTGRES_DB: payment_db
-    ports:
-      - "5434:5432"
-    volumes:
-      - payment_postgres_data:/var/lib/postgresql/data
-
-  # ----------------------------------------
-  # Payment Service (NEW)
-  # ----------------------------------------
-  payment-service:
-    # adjust if your payment-service is in another folder
-    build: ../payment-service
-    container_name: payment-service
-    ports:
-      - "8082:8082"
-    depends_on:
-      - payment-db
-      - kafka
-    env_file:
-      - .env
-    environment:
-      SPRING_PROFILES_ACTIVE: dev
-
-      # Payment DB
-      SPRING_DATASOURCE_URL: jdbc:postgresql://payment-db:5432/payment_db
-      SPRING_DATASOURCE_USERNAME: payment_user
-      SPRING_DATASOURCE_PASSWORD: payment_password
-
-      # Kafka (optional if you publish events)
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-
-      # Stripe secrets can live here now
-      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
-      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
-
-      # Optional: if payment service validates JWT later
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
-
-      # Make sure server runs on 8082 (also set in application.yml)
-      SERVER_PORT: 8082
-
-  # ----------------------------------------
   # Redis
   # ----------------------------------------
   redis:
@@ -146,6 +129,36 @@ services:
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
       - redis_data:/data
+
+  # ----------------------------------------
+  # Retail Monolith (startup order: last)
+  # ----------------------------------------
+  retail-app:
+    build: ../retail
+    container_name: retail-spring-app
+    ports:
+      - "8080:8080"
+    depends_on:
+      - retail-db
+      - kafka
+      - redis
+      - payment-service
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      DB_USERNAME: user
+      DB_PASSWORD: password
+      FLYWAY_URL: jdbc:postgresql://retail-db:5432/retail_db
+      SPRING_DATASOURCE_URL: jdbc:postgresql://retail-db:5432/retail_db
+      SPRING_DATASOURCE_USERNAME: user
+      SPRING_DATASOURCE_PASSWORD: password
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_CACHE_TYPE: redis
+      PAYMENT_SERVICE_URL: http://payment-service:8082
 
   # ----------------------------------------
   # Monitoring
@@ -165,7 +178,7 @@ services:
     image: grafana/grafana:10.0.0
     container_name: grafana
     ports:
-      - "3000:3000"
+      - "3001:3000"
     depends_on:
       - prometheus
 
