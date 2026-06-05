@@ -144,6 +144,49 @@ services:
       SERVER_PORT: 8084
 
   # ----------------------------------------
+  # Order Database
+  # ----------------------------------------
+  order-db:
+    image: postgres:14-alpine
+    container_name: order-postgres-db
+    environment:
+      POSTGRES_USER: order_user
+      POSTGRES_PASSWORD: order_password
+      POSTGRES_DB: order_db
+    ports:
+      - "5437:5432"
+    volumes:
+      - order_postgres_data:/var/lib/postgresql/data
+
+  # ----------------------------------------
+  # Order Service
+  # ----------------------------------------
+  order-service:
+    build: ./services/order-service
+    container_name: order-service
+    ports:
+      - "8085:8085"
+    depends_on:
+      config-server:
+        condition: service_healthy
+      order-db:
+        condition: service_started
+      kafka:
+        condition: service_started
+    environment:
+      SPRING_CONFIG_IMPORT: configserver:http://config-server:8888
+      SPRING_DATASOURCE_URL: jdbc:postgresql://order-db:5432/order_db
+      SPRING_DATASOURCE_USERNAME: order_user
+      SPRING_DATASOURCE_PASSWORD: order_password
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      APP_FRONTEND_BASE_URL: ${APP_FRONTEND_BASE_URL:http://localhost:3000}
+      PRODUCT_SERVICE_URL: http://product-service:8084
+      EUREKA_HOST: discovery
+      SERVER_PORT: 8085
+
+  # ----------------------------------------
   # Payment Database
   # ----------------------------------------
   payment-db:
@@ -266,5 +309,6 @@ volumes:
   payment_postgres_data:
   customer_postgres_data:
   product_postgres_data:
+  order_postgres_data:
   kafka_data:
   redis_data:
