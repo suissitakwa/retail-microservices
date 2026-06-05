@@ -1,0 +1,5 @@
+spring:
+  application:
+    name: copilot-service
+  config:
+    import: optional:configserver:http://localhost:8888

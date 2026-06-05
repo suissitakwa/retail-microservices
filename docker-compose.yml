@@ -227,6 +227,25 @@ services:
       SERVER_PORT: 8086
 
   # ----------------------------------------
+  # Copilot Service (no database)
+  # ----------------------------------------
+  copilot-service:
+    build: ./services/copilot-service
+    container_name: copilot-service
+    ports:
+      - "8087:8087"
+    depends_on:
+      config-server:
+        condition: service_healthy
+    environment:
+      SPRING_CONFIG_IMPORT: configserver:http://config-server:8888
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ORDER_SERVICE_URL: http://order-service:8085
+      EUREKA_HOST: discovery
+      SERVER_PORT: 8087
+
+  # ----------------------------------------
   # Payment Database
   # ----------------------------------------
   payment-db:
