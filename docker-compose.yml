@@ -187,6 +187,46 @@ services:
       SERVER_PORT: 8085
 
   # ----------------------------------------
+  # Notification Database
+  # ----------------------------------------
+  notification-db:
+    image: postgres:14-alpine
+    container_name: notification-postgres-db
+    environment:
+      POSTGRES_USER: notif_user
+      POSTGRES_PASSWORD: notif_password
+      POSTGRES_DB: notification_db
+    ports:
+      - "5438:5432"
+    volumes:
+      - notification_postgres_data:/var/lib/postgresql/data
+
+  # ----------------------------------------
+  # Notification Service
+  # ----------------------------------------
+  notification-service:
+    build: ./services/notification-service
+    container_name: notification-service
+    ports:
+      - "8086:8086"
+    depends_on:
+      config-server:
+        condition: service_healthy
+      notification-db:
+        condition: service_started
+      kafka:
+        condition: service_started
+    environment:
+      SPRING_CONFIG_IMPORT: configserver:http://config-server:8888
+      SPRING_DATASOURCE_URL: jdbc:postgresql://notification-db:5432/notification_db
+      SPRING_DATASOURCE_USERNAME: notif_user
+      SPRING_DATASOURCE_PASSWORD: notif_password
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      EUREKA_HOST: discovery
+      SERVER_PORT: 8086
+
+  # ----------------------------------------
   # Payment Database
   # ----------------------------------------
   payment-db:
@@ -310,5 +350,6 @@ volumes:
   customer_postgres_data:
   product_postgres_data:
   order_postgres_data:
+  notification_postgres_data:
   kafka_data:
   redis_data:
