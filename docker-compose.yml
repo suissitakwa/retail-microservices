@@ -102,6 +102,48 @@ services:
       SERVER_PORT: 8083
 
   # ----------------------------------------
+  # Product Database
+  # ----------------------------------------
+  product-db:
+    image: postgres:14-alpine
+    container_name: product-postgres-db
+    environment:
+      POSTGRES_USER: product_user
+      POSTGRES_PASSWORD: product_password
+      POSTGRES_DB: product_db
+    ports:
+      - "5436:5432"
+    volumes:
+      - product_postgres_data:/var/lib/postgresql/data
+
+  # ----------------------------------------
+  # Product Service
+  # ----------------------------------------
+  product-service:
+    build: ./services/product-service
+    container_name: product-service
+    ports:
+      - "8084:8084"
+    depends_on:
+      config-server:
+        condition: service_healthy
+      product-db:
+        condition: service_started
+      redis:
+        condition: service_started
+    environment:
+      SPRING_CONFIG_IMPORT: configserver:http://config-server:8888
+      SPRING_DATASOURCE_URL: jdbc:postgresql://product-db:5432/product_db
+      SPRING_DATASOURCE_USERNAME: product_user
+      SPRING_DATASOURCE_PASSWORD: product_password
+      SPRING_CACHE_TYPE: redis
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      EUREKA_HOST: discovery
+      SERVER_PORT: 8084
+
+  # ----------------------------------------
   # Payment Database
   # ----------------------------------------
   payment-db:
@@ -223,5 +265,6 @@ volumes:
   postgres_data:
   payment_postgres_data:
   customer_postgres_data:
+  product_postgres_data:
   kafka_data:
   redis_data:
