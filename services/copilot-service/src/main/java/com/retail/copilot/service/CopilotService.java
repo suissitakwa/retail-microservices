@@ -52,9 +52,13 @@ public class CopilotService {
                 if (itemsObj instanceof List<?> itemsList && !itemsList.isEmpty()) {
                     itemsText = itemsList.stream()
                             .filter(i -> i instanceof Map<?,?>)
-                            .map(i -> {
+                            .<String>map(i -> {
                                 Map<?,?> item = (Map<?,?>) i;
-                                return item.getOrDefault("quantity", "?") + " x " + item.getOrDefault("productName", "?");
+                                Object qty  = item.get("quantity");
+                                Object name = item.get("productName");
+                                return (qty  != null ? qty.toString()  : "?")
+                                        + " x "
+                                        + (name != null ? name.toString() : "?");
                             })
                             .collect(Collectors.joining(", "));
                 }

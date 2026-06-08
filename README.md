@@ -1,5 +1,7 @@
 # Retail Microservices
 
+[![CI](https://github.com/suissitakwa/retail-microservices/actions/workflows/build.yml/badge.svg)](https://github.com/suissitakwa/retail-microservices/actions/workflows/build.yml)
+
 Spring Boot 4 / Java 21 microservices layer for the retail platform. These services run alongside (and progressively replace) the Spring Boot monolith at `../retail/`.
 
 ## Services
