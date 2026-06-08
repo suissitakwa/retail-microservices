@@ -57,10 +57,4 @@ jobs:
 
       - name: Run unit tests
         working-directory: services/notification-service
-        run: |
-          ./mvnw test \
-            -Dtest="NotificationControllerTest,NotificationServiceTest" \
-            -Dspring.autoconfigure.exclude="org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration,org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration,org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration" \
-            -Dspring.cloud.config.enabled=false \
-            -Deureka.client.enabled=false \
-            -Dapplication.security.jwt.secret-key=dGVzdC1zZWNyZXQta2V5LWZvci11bml0LXRlc3Rpbmctb25seQ==
+        run: ./mvnw test -Dtest="NotificationControllerTest,NotificationServiceTest"
