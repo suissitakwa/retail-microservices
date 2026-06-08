@@ -54,7 +54,9 @@ public class CopilotService {
                             .filter(i -> i instanceof Map<?,?>)
                             .map(i -> {
                                 Map<?,?> item = (Map<?,?>) i;
-                                return item.getOrDefault("quantity", "?") + " x " + item.getOrDefault("productName", "?");
+                                return String.valueOf(item.getOrDefault("quantity", "?"))
+                                        + " x "
+                                        + String.valueOf(item.getOrDefault("productName", "?"));
                             })
                             .collect(Collectors.joining(", "));
                 }
