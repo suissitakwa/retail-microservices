@@ -39,11 +39,20 @@ jobs:
         working-directory: services/${{ matrix.service }}
         run: ./mvnw compile -q
 
-  # ── Unit tests (slice tests — no Docker, no DB) ────────────────────────────
+  # ── Unit tests (pure unit tests — no Docker, no DB) ───────────────────────
   unit-tests:
-    name: Unit tests — notification-service
+    name: Unit tests — ${{ matrix.service }}
     runs-on: ubuntu-latest
     needs: compile
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: notification-service
+            tests: "NotificationControllerTest,NotificationServiceTest"
+          - service: product-service
+            tests: "ProductServiceTest,InventoryServiceTest"
 
     steps:
       - uses: actions/checkout@v4
@@ -56,5 +65,5 @@ jobs:
           cache: maven
 
       - name: Run unit tests
-        working-directory: services/notification-service
-        run: ./mvnw test -Dtest="NotificationControllerTest,NotificationServiceTest"
+        working-directory: services/${{ matrix.service }}
+        run: ./mvnw test -Dtest="${{ matrix.tests }}"

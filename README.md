@@ -65,68 +65,55 @@ cd services/copilot-service  && ./mvnw spring-boot:run
 ## Architecture
 
 ```mermaid
-graph TB
-    UI([React UI :3000])
-    MON([retail monolith :8080])
+graph TD
+    UI([🖥️ React UI])
 
-    subgraph infra["⚙️ Infrastructure"]
-        CFG[config-server :8888\nnative profile · serves configurations/]
-        EUR[discovery / Eureka :8761\nservice registry]
+    subgraph infra["Infrastructure"]
+        CFG["⚙️ config-server\n:8888"]
+        EUR["🔍 Eureka discovery\n:8761"]
     end
 
-    subgraph svc["🔧 Business Services"]
-        CUST[customer-service :8083\n🔑 only JWT issuer]
-        PAY[payment-service :8082\npayment-db :5434]
-        PROD[product-service :8084\nproduct-db :5436]
-        ORD[order-service :8085\norder-db :5437]
-        NOTIF[notification-service :8086\nnotification-db :5438]
-        COP[copilot-service :8087\nno DB]
+    subgraph services["Business Services"]
+        CUST["👤 customer-service\n:8083 · JWT issuer"]
+        PAY["💳 payment-service\n:8082"]
+        PROD["📦 product-service\n:8084 · Redis"]
+        ORD["🛒 order-service\n:8085"]
+        NOTIF["🔔 notification-service\n:8086"]
+        COP["🤖 copilot-service\n:8087"]
     end
 
-    subgraph ext["☁️ External"]
-        STRIPE[(Stripe)]
-        OPENAI[(OpenAI GPT-4o-mini)]
-        REDIS[(Redis cache)]
+    subgraph messaging["Kafka"]
+        OC[["order.created"]]
+        PP[["payment.processed"]]
     end
 
-    subgraph kafka["📨 Kafka"]
-        OC[[order.created]]
-        PP[[payment.processed]]
+    subgraph external["External"]
+        STRIPE["💳 Stripe"]
+        OPENAI["🧠 OpenAI GPT-4o-mini"]
+        REDIS[("Redis")]
     end
 
-    %% Config distribution
-    CFG -.->|config at startup| CUST & PAY & PROD & ORD & NOTIF & COP
+    CFG -.->|config| CUST & PAY & PROD & ORD & NOTIF & COP
+    EUR -.->|registry| CUST & PAY & PROD & ORD & NOTIF & COP
 
-    %% Service registration
-    CUST & PAY & PROD & ORD & NOTIF & COP -.->|register| EUR
+    UI --> CUST
+    UI --> ORD
+    UI --> PROD
+    UI --> NOTIF
+    UI --> COP
 
-    %% Client → service
-    UI -->|JWT auth| CUST
-    UI -->|browse / cart / orders| ORD
-    UI -->|products| PROD
-    UI -->|notifications| NOTIF
-    UI -->|chat| COP
+    ORD -->|product details| PROD
+    COP -->|order facts| ORD
 
-    %% Inter-service (sync)
-    ORD -->|RestClient: product name + price| PROD
-    COP -->|RestClient: order facts| ORD
-    MON -->|internal: payment lifecycle| PAY
-
-    %% Kafka publish
-    ORD -->|publishes| OC
-    PAY -->|publishes| PP
-
-    %% Kafka consume
-    OC -->|ORDER_PLACED notification| NOTIF
-    OC -->|decrement inventory| MON
-    PP -->|PAYMENT_PAID notification| NOTIF
-    PP -->|mark payment PAID| MON
-
-    %% External
-    ORD -->|checkout session| STRIPE
-    PAY -->|webhook: payment_intent.succeeded| STRIPE
+    ORD -->|checkout| STRIPE
+    PAY -->|webhook| STRIPE
     COP --> OPENAI
     PROD --> REDIS
+
+    ORD -->|publishes| OC
+    PAY -->|publishes| PP
+    OC --> NOTIF
+    PP --> NOTIF
 ```
 
 ### Tech Stack
