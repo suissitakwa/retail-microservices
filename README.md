@@ -64,6 +64,71 @@ cd services/copilot-service  && ./mvnw spring-boot:run
 
 ## Architecture
 
+```mermaid
+graph TB
+    UI([React UI :3000])
+    MON([retail monolith :8080])
+
+    subgraph infra["⚙️ Infrastructure"]
+        CFG[config-server :8888\nnative profile · serves configurations/]
+        EUR[discovery / Eureka :8761\nservice registry]
+    end
+
+    subgraph svc["🔧 Business Services"]
+        CUST[customer-service :8083\n🔑 only JWT issuer]
+        PAY[payment-service :8082\npayment-db :5434]
+        PROD[product-service :8084\nproduct-db :5436]
+        ORD[order-service :8085\norder-db :5437]
+        NOTIF[notification-service :8086\nnotification-db :5438]
+        COP[copilot-service :8087\nno DB]
+    end
+
+    subgraph ext["☁️ External"]
+        STRIPE[(Stripe)]
+        OPENAI[(OpenAI GPT-4o-mini)]
+        REDIS[(Redis cache)]
+    end
+
+    subgraph kafka["📨 Kafka"]
+        OC[[order.created]]
+        PP[[payment.processed]]
+    end
+
+    %% Config distribution
+    CFG -.->|config at startup| CUST & PAY & PROD & ORD & NOTIF & COP
+
+    %% Service registration
+    CUST & PAY & PROD & ORD & NOTIF & COP -.->|register| EUR
+
+    %% Client → service
+    UI -->|JWT auth| CUST
+    UI -->|browse / cart / orders| ORD
+    UI -->|products| PROD
+    UI -->|notifications| NOTIF
+    UI -->|chat| COP
+
+    %% Inter-service (sync)
+    ORD -->|RestClient: product name + price| PROD
+    COP -->|RestClient: order facts| ORD
+    MON -->|internal: payment lifecycle| PAY
+
+    %% Kafka publish
+    ORD -->|publishes| OC
+    PAY -->|publishes| PP
+
+    %% Kafka consume
+    OC -->|ORDER_PLACED notification| NOTIF
+    OC -->|decrement inventory| MON
+    PP -->|PAYMENT_PAID notification| NOTIF
+    PP -->|mark payment PAID| MON
+
+    %% External
+    ORD -->|checkout session| STRIPE
+    PAY -->|webhook: payment_intent.succeeded| STRIPE
+    COP --> OPENAI
+    PROD --> REDIS
+```
+
 ### Tech Stack
 
 - **Spring Boot 4.0.2** / **Java 21** / **Spring Cloud 2025.1.x**
