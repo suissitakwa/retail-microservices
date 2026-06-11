@@ -3,7 +3,7 @@ server:
 
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/notification_db
+    url: jdbc:postgresql://localhost:5438/notification_db
     username: ${DB_USERNAME:notif_user}
     password: ${DB_PASSWORD:notif_password}
     driver-class-name: org.postgresql.Driver

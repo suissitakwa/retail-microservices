@@ -4,6 +4,10 @@
 
 Spring Boot 4 / Java 21 microservices layer for the retail platform. These services run alongside (and progressively replace) the Spring Boot monolith at `../retail/`.
 
+## All 5 services running — Eureka dashboard
+
+![Eureka dashboard — all 5 services UP](docs/screenshots/eureka-dashboard.png)
+
 ## Services
 
 | Service | Port | DB Port | Status |
