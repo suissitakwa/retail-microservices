@@ -68,46 +68,7 @@ cd services/copilot-service  && ./mvnw spring-boot:run
 
 ## Architecture
 
-```mermaid
-flowchart TB
-    UI(["React UI · :3000"])
-
-    subgraph INFRA["⚙ Infrastructure · all services pull config from Config Server :8888 and register with Eureka :8761"]
-        direction LR
-        CFG["Config Server\n:8888"]
-        EUR["Eureka\n:8761"]
-    end
-
-    subgraph BIZ["Business Services"]
-        direction LR
-        CUST["customer-service\n:8083 · JWT issuer"]
-        PROD["product-service\n:8084 · Redis"]
-        ORD["order-service\n:8085 · Stripe"]
-        PAY["payment-service\n:8082"]
-        NOTIF["notification-service\n:8086"]
-        COP["copilot-service\n:8087 · OpenAI"]
-    end
-
-    subgraph ASYNC["Kafka Events"]
-        direction LR
-        OC(["order.created"])
-        PP(["payment.processed"])
-    end
-
-    STRIPE["Stripe"]
-    OPENAI["OpenAI GPT-4o-mini"]
-    REDIS[("Redis Cache")]
-
-    UI -->|HTTP| CUST & PROD & ORD & NOTIF & COP
-    ORD -->|REST| PROD
-    COP -->|REST| ORD
-    ORD -->|checkout| STRIPE
-    COP --> OPENAI
-    PROD --> REDIS
-    ORD --> OC
-    PAY --> PP
-    OC & PP --> NOTIF
-```
+![Architecture diagram](docs/architecture.svg)
 
 ### Tech Stack
 
