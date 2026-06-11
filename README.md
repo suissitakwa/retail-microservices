@@ -68,57 +68,7 @@ cd services/copilot-service  && ./mvnw spring-boot:run
 
 ## Architecture
 
-```mermaid
-graph TD
-    UI([🖥️ React UI])
-
-    subgraph infra["Infrastructure"]
-        CFG["⚙️ config-server\n:8888"]
-        EUR["🔍 Eureka discovery\n:8761"]
-    end
-
-    subgraph services["Business Services"]
-        CUST["👤 customer-service\n:8083 · JWT issuer"]
-        PAY["💳 payment-service\n:8082"]
-        PROD["📦 product-service\n:8084 · Redis"]
-        ORD["🛒 order-service\n:8085"]
-        NOTIF["🔔 notification-service\n:8086"]
-        COP["🤖 copilot-service\n:8087"]
-    end
-
-    subgraph messaging["Kafka"]
-        OC[["order.created"]]
-        PP[["payment.processed"]]
-    end
-
-    subgraph external["External"]
-        STRIPE["💳 Stripe"]
-        OPENAI["🧠 OpenAI GPT-4o-mini"]
-        REDIS[("Redis")]
-    end
-
-    CFG -.->|config| CUST & PAY & PROD & ORD & NOTIF & COP
-    EUR -.->|registry| CUST & PAY & PROD & ORD & NOTIF & COP
-
-    UI --> CUST
-    UI --> ORD
-    UI --> PROD
-    UI --> NOTIF
-    UI --> COP
-
-    ORD -->|product details| PROD
-    COP -->|order facts| ORD
-
-    ORD -->|checkout| STRIPE
-    PAY -->|webhook| STRIPE
-    COP --> OPENAI
-    PROD --> REDIS
-
-    ORD -->|publishes| OC
-    PAY -->|publishes| PP
-    OC --> NOTIF
-    PP --> NOTIF
-```
+![Architecture diagram](docs/architecture.svg)
 
 ### Tech Stack
 

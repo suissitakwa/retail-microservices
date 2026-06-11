@@ -1,0 +1,136 @@
+<svg viewBox="0 0 860 560" xmlns="http://www.w3.org/2000/svg" font-family="system-ui,-apple-system,sans-serif">
+
+  <!-- Background -->
+  <rect width="860" height="560" fill="#0d1117" rx="10"/>
+
+  <!-- ── REACT UI ── -->
+  <rect x="330" y="18" width="200" height="44" rx="7" fill="#161b22" stroke="#4f8ef7" stroke-width="1.5"/>
+  <text x="430" y="36" text-anchor="middle" fill="#4f8ef7" font-size="12" font-weight="700">React UI</text>
+  <text x="430" y="51" text-anchor="middle" fill="#6b7280" font-size="10">:3000 · JWT in localStorage</text>
+
+  <!-- ── INFRA BAND ── -->
+  <rect x="30" y="90" width="800" height="64" rx="7" fill="#161b22" stroke="#30363d" stroke-width="1" stroke-dasharray="5 3"/>
+  <text x="46" y="107" fill="#484f58" font-size="10" font-weight="700" letter-spacing="0.1em">INFRASTRUCTURE</text>
+  <text x="46" y="121" fill="#484f58" font-size="10">All services pull config on startup and self-register with Eureka</text>
+  <!-- Config Server -->
+  <rect x="250" y="110" width="155" height="34" rx="6" fill="#0d1117" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="327" y="125" text-anchor="middle" fill="#a5b4fc" font-size="11" font-weight="600">Config Server · :8888</text>
+  <text x="327" y="138" text-anchor="middle" fill="#484f58" font-size="10">serves configurations/*.yml</text>
+  <!-- Eureka -->
+  <rect x="455" y="110" width="155" height="34" rx="6" fill="#0d1117" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="532" y="125" text-anchor="middle" fill="#a5b4fc" font-size="11" font-weight="600">Eureka · :8761</text>
+  <text x="532" y="138" text-anchor="middle" fill="#484f58" font-size="10">service registry</text>
+
+  <!-- ── BUSINESS SERVICES BAND ── -->
+  <rect x="30" y="186" width="800" height="156" rx="7" fill="#161b22" stroke="#30363d" stroke-width="1" stroke-dasharray="5 3"/>
+  <text x="46" y="203" fill="#484f58" font-size="10" font-weight="700" letter-spacing="0.1em">BUSINESS SERVICES</text>
+
+  <!-- Row 1: customer | product | order | payment | copilot -->
+  <!-- customer-service -->
+  <rect x="46" y="210" width="138" height="48" rx="6" fill="#0d1117" stroke="#10b981" stroke-width="1.5"/>
+  <text x="115" y="229" text-anchor="middle" fill="#6ee7b7" font-size="11" font-weight="600">customer-service</text>
+  <text x="115" y="242" text-anchor="middle" fill="#484f58" font-size="10">:8083 · JWT issuer</text>
+  <text x="115" y="253" text-anchor="middle" fill="#484f58" font-size="10">Auth + profiles</text>
+
+  <!-- product-service -->
+  <rect x="200" y="210" width="138" height="48" rx="6" fill="#0d1117" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="269" y="229" text-anchor="middle" fill="#fcd34d" font-size="11" font-weight="600">product-service</text>
+  <text x="269" y="242" text-anchor="middle" fill="#484f58" font-size="10">:8084 · Redis cache</text>
+  <text x="269" y="253" text-anchor="middle" fill="#484f58" font-size="10">Products · inventory</text>
+
+  <!-- order-service -->
+  <rect x="354" y="210" width="138" height="48" rx="6" fill="#0d1117" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="423" y="229" text-anchor="middle" fill="#fcd34d" font-size="11" font-weight="600">order-service</text>
+  <text x="423" y="242" text-anchor="middle" fill="#484f58" font-size="10">:8085 · Stripe</text>
+  <text x="423" y="253" text-anchor="middle" fill="#484f58" font-size="10">Cart · checkout</text>
+
+  <!-- payment-service -->
+  <rect x="508" y="210" width="138" height="48" rx="6" fill="#0d1117" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="577" y="229" text-anchor="middle" fill="#fcd34d" font-size="11" font-weight="600">payment-service</text>
+  <text x="577" y="242" text-anchor="middle" fill="#484f58" font-size="10">:8082</text>
+  <text x="577" y="253" text-anchor="middle" fill="#484f58" font-size="10">Payment lifecycle</text>
+
+  <!-- copilot-service -->
+  <rect x="662" y="210" width="138" height="48" rx="6" fill="#0d1117" stroke="#ec4899" stroke-width="1.5"/>
+  <text x="731" y="229" text-anchor="middle" fill="#f9a8d4" font-size="11" font-weight="600">copilot-service</text>
+  <text x="731" y="242" text-anchor="middle" fill="#484f58" font-size="10">:8087 · OpenAI</text>
+  <text x="731" y="253" text-anchor="middle" fill="#484f58" font-size="10">AI assistant</text>
+
+  <!-- notification-service (row 2, centered) -->
+  <rect x="354" y="282" width="138" height="48" rx="6" fill="#0d1117" stroke="#8b5cf6" stroke-width="1.5"/>
+  <text x="423" y="301" text-anchor="middle" fill="#c4b5fd" font-size="11" font-weight="600">notification-service</text>
+  <text x="423" y="314" text-anchor="middle" fill="#484f58" font-size="10">:8086</text>
+  <text x="423" y="325" text-anchor="middle" fill="#484f58" font-size="10">Kafka consumer</text>
+
+  <!-- ── KAFKA BAND ── -->
+  <rect x="30" y="374" width="480" height="56" rx="7" fill="#161b22" stroke="#30363d" stroke-width="1" stroke-dasharray="5 3"/>
+  <text x="46" y="391" fill="#484f58" font-size="10" font-weight="700" letter-spacing="0.1em">KAFKA</text>
+  <rect x="80" y="396" width="150" height="26" rx="5" fill="#0d1117" stroke="#8b5cf6" stroke-width="1.2"/>
+  <text x="155" y="413" text-anchor="middle" fill="#c4b5fd" font-size="11">order.created</text>
+  <rect x="260" y="396" width="170" height="26" rx="5" fill="#0d1117" stroke="#8b5cf6" stroke-width="1.2"/>
+  <text x="345" y="413" text-anchor="middle" fill="#c4b5fd" font-size="11">payment.processed</text>
+
+  <!-- ── EXTERNAL BAND ── -->
+  <rect x="530" y="374" width="300" height="116" rx="7" fill="#161b22" stroke="#30363d" stroke-width="1" stroke-dasharray="5 3"/>
+  <text x="546" y="391" fill="#484f58" font-size="10" font-weight="700" letter-spacing="0.1em">EXTERNAL</text>
+  <rect x="546" y="396" width="90" height="34" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="1.2"/>
+  <text x="591" y="417" text-anchor="middle" fill="#e6edf3" font-size="11" font-weight="600">Stripe</text>
+  <rect x="654" y="396" width="90" height="34" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="1.2"/>
+  <text x="699" y="413" text-anchor="middle" fill="#e6edf3" font-size="11" font-weight="600">OpenAI</text>
+  <text x="699" y="426" text-anchor="middle" fill="#484f58" font-size="10">GPT-4o-mini</text>
+  <rect x="600" y="448" width="90" height="34" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="1.2"/>
+  <text x="645" y="465" text-anchor="middle" fill="#e6edf3" font-size="11" font-weight="600">Redis</text>
+  <text x="645" y="478" text-anchor="middle" fill="#484f58" font-size="10">product cache</text>
+
+  <!-- ── ARROWS ── -->
+  <defs>
+    <marker id="ab" markerWidth="7" markerHeight="7" refX="4" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#4f8ef7" opacity="0.8"/></marker>
+    <marker id="ay" markerWidth="7" markerHeight="7" refX="4" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#f59e0b" opacity="0.8"/></marker>
+    <marker id="av" markerWidth="7" markerHeight="7" refX="4" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#8b5cf6" opacity="0.8"/></marker>
+    <marker id="ag" markerWidth="7" markerHeight="7" refX="4" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#6b7280" opacity="0.6"/></marker>
+  </defs>
+
+  <!-- UI → customer -->
+  <path d="M390,62 L115,210" fill="none" stroke="#4f8ef7" stroke-width="1.2" opacity="0.55" marker-end="url(#ab)"/>
+  <!-- UI → product -->
+  <path d="M410,62 L269,210" fill="none" stroke="#4f8ef7" stroke-width="1.2" opacity="0.55" marker-end="url(#ab)"/>
+  <!-- UI → order -->
+  <path d="M430,62 L423,210" fill="none" stroke="#4f8ef7" stroke-width="1.2" opacity="0.55" marker-end="url(#ab)"/>
+  <!-- UI → notification -->
+  <path d="M445,62 Q445,170 423,282" fill="none" stroke="#4f8ef7" stroke-width="1.2" opacity="0.35" marker-end="url(#ab)" stroke-dasharray="4 3"/>
+  <!-- UI → copilot -->
+  <path d="M470,62 L731,210" fill="none" stroke="#4f8ef7" stroke-width="1.2" opacity="0.55" marker-end="url(#ab)"/>
+
+  <!-- order → product (REST) -->
+  <line x1="354" y1="236" x2="338" y2="236" stroke="#f59e0b" stroke-width="1.3" opacity="0.7" marker-end="url(#ay)"/>
+  <text x="318" y="231" fill="#f59e0b" font-size="9" opacity="0.8">REST</text>
+
+  <!-- copilot → order (REST) -->
+  <line x1="662" y1="236" x2="492" y2="236" stroke="#ec4899" stroke-width="1.3" opacity="0.6" marker-end="url(#ag)"/>
+  <text x="560" y="230" fill="#ec4899" font-size="9" opacity="0.7">REST</text>
+
+  <!-- order → Kafka order.created -->
+  <path d="M423,258 L155,396" fill="none" stroke="#8b5cf6" stroke-width="1.3" opacity="0.6" marker-end="url(#av)"/>
+  <!-- payment → Kafka payment.processed -->
+  <path d="M577,258 L345,396" fill="none" stroke="#8b5cf6" stroke-width="1.3" opacity="0.6" marker-end="url(#av)"/>
+  <!-- order.created → notification -->
+  <path d="M155,422 L390,306" fill="none" stroke="#8b5cf6" stroke-width="1.3" opacity="0.6" marker-end="url(#av)"/>
+  <!-- payment.processed → notification -->
+  <path d="M345,422 L423,330" fill="none" stroke="#8b5cf6" stroke-width="1.3" opacity="0.6" marker-end="url(#av)"/>
+
+  <!-- order → Stripe -->
+  <path d="M492,244 Q530,290 591,396" fill="none" stroke="#6b7280" stroke-width="1" opacity="0.45" marker-end="url(#ag)"/>
+  <!-- copilot → OpenAI -->
+  <path d="M731,258 L699,396" fill="none" stroke="#6b7280" stroke-width="1" opacity="0.45" marker-end="url(#ag)"/>
+  <!-- product → Redis -->
+  <path d="M338,258 Q338,350 600,465" fill="none" stroke="#6b7280" stroke-width="1" opacity="0.35" stroke-dasharray="3 3" marker-end="url(#ag)"/>
+
+  <!-- ── LEGEND ── -->
+  <text x="46" y="520" fill="#484f58" font-size="10" font-weight="600">Legend</text>
+  <line x1="96" y1="516" x2="120" y2="516" stroke="#4f8ef7" stroke-width="1.5"/>
+  <text x="123" y="520" fill="#6b7280" font-size="10">HTTP (sync)</text>
+  <line x1="195" y1="516" x2="219" y2="516" stroke="#8b5cf6" stroke-width="1.5"/>
+  <text x="222" y="520" fill="#6b7280" font-size="10">Kafka (async)</text>
+  <line x1="305" y1="516" x2="329" y2="516" stroke="#6b7280" stroke-width="1" opacity="0.6"/>
+  <text x="332" y="520" fill="#6b7280" font-size="10">External call</text>
+</svg>
