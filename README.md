@@ -69,55 +69,65 @@ cd services/copilot-service  && ./mvnw spring-boot:run
 ## Architecture
 
 ```mermaid
-graph TD
-    UI([🖥️ React UI])
+flowchart TB
+    UI["React UI · :3000"]
 
-    subgraph infra["Infrastructure"]
-        CFG["⚙️ config-server\n:8888"]
-        EUR["🔍 Eureka discovery\n:8761"]
+    subgraph INFRA["Infrastructure"]
+        CFG["Config Server · :8888\nnative profile"]
+        EUR["Eureka Discovery · :8761\nservice registry"]
     end
 
-    subgraph services["Business Services"]
-        CUST["👤 customer-service\n:8083 · JWT issuer"]
-        PAY["💳 payment-service\n:8082"]
-        PROD["📦 product-service\n:8084 · Redis"]
-        ORD["🛒 order-service\n:8085"]
-        NOTIF["🔔 notification-service\n:8086"]
-        COP["🤖 copilot-service\n:8087"]
+    subgraph BIZ["Business Services"]
+        CUST["customer-service · :8083\nAuth · JWT issuer"]
+        PROD["product-service · :8084\nProducts · Redis cache"]
+        ORD["order-service · :8085\nCart · Stripe checkout"]
+        PAY["payment-service · :8082\nPayment lifecycle"]
+        NOTIF["notification-service · :8086\nKafka consumer"]
+        COP["copilot-service · :8087\nOpenAI GPT-4o-mini"]
     end
 
-    subgraph messaging["Kafka"]
-        OC[["order.created"]]
-        PP[["payment.processed"]]
+    subgraph KAFKA["Kafka"]
+        OC([order.created])
+        PP([payment.processed])
     end
 
-    subgraph external["External"]
-        STRIPE["💳 Stripe"]
-        OPENAI["🧠 OpenAI GPT-4o-mini"]
-        REDIS[("Redis")]
+    subgraph EXT["External"]
+        STRIPE[Stripe]
+        OPENAI[OpenAI]
+        REDIS[(Redis)]
     end
 
-    CFG -.->|config| CUST & PAY & PROD & ORD & NOTIF & COP
-    EUR -.->|registry| CUST & PAY & PROD & ORD & NOTIF & COP
+    CFG -. config .-> CUST & PROD & ORD & PAY & NOTIF & COP
+    EUR -. register .-> CUST & PROD & ORD & PAY & NOTIF & COP
 
-    UI --> CUST
-    UI --> ORD
-    UI --> PROD
-    UI --> NOTIF
-    UI --> COP
+    UI -- HTTP --> CUST & PROD & ORD & NOTIF & COP
 
-    ORD -->|product details| PROD
-    COP -->|order facts| ORD
+    ORD -- REST --> PROD
+    COP -- REST --> ORD
 
-    ORD -->|checkout| STRIPE
-    PAY -->|webhook| STRIPE
+    ORD --> OC
+    PAY --> PP
+    OC & PP --> NOTIF
+
+    ORD --> STRIPE
     COP --> OPENAI
     PROD --> REDIS
 
-    ORD -->|publishes| OC
-    PAY -->|publishes| PP
-    OC --> NOTIF
-    PP --> NOTIF
+    classDef infra fill:#1e2235,stroke:#6366f1,color:#a5b4fc
+    classDef auth  fill:#1e2235,stroke:#10b981,color:#6ee7b7
+    classDef domain fill:#1e2235,stroke:#f59e0b,color:#fcd34d
+    classDef async fill:#1e2235,stroke:#8b5cf6,color:#c4b5fd
+    classDef ai    fill:#1e2235,stroke:#ec4899,color:#f9a8d4
+    classDef ext   fill:#1e2235,stroke:#4b5563,color:#e5e7eb
+    classDef event fill:#1e2235,stroke:#8b5cf6,color:#c4b5fd
+
+    class CFG,EUR infra
+    class CUST auth
+    class PROD,ORD,PAY domain
+    class NOTIF async
+    class COP ai
+    class STRIPE,OPENAI,REDIS ext
+    class OC,PP event
 ```
 
 ### Tech Stack
