@@ -15,7 +15,7 @@ spring:
 application:
   security:
     jwt:
-      secret-key: ${JWT_SECRET_KEY:default-secret-key-for-dev-only-change-in-prod}
+      secret-key: ${JWT_SECRET_KEY}
       expiration: 86400000        # 24 h
       refresh-expiration: 604800000 # 7 d
 

@@ -4,7 +4,7 @@ server:
 application:
   security:
     jwt:
-      secret-key: ${JWT_SECRET_KEY:default-secret-key-for-dev-only-change-in-prod}
+      secret-key: ${JWT_SECRET_KEY}
 
 openai:
   api-key: ${OPENAI_API_KEY:}

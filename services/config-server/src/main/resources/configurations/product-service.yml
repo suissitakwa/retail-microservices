@@ -21,7 +21,7 @@ spring:
 application:
   security:
     jwt:
-      secret-key: ${JWT_SECRET_KEY:default-secret-key-for-dev-only-change-in-prod}
+      secret-key: ${JWT_SECRET_KEY}
 
 eureka:
   client:

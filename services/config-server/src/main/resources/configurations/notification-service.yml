@@ -19,12 +19,12 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
-        spring.json.trusted.packages: "*"
+        spring.json.trusted.packages: "com.retail.*"
 
 application:
   security:
     jwt:
-      secret-key: ${JWT_SECRET_KEY:default-secret-key-for-dev-only-change-in-prod}
+      secret-key: ${JWT_SECRET_KEY}
 
 eureka:
   client:
