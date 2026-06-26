@@ -1,5 +1,7 @@
 package com.retail.notification.kafka;
 
+import com.retail.notification.client.CustomerClient;
+import com.retail.notification.email.EmailService;
 import com.retail.notification.entity.Notification;
 import com.retail.notification.repository.NotificationRepository;
 import jakarta.transaction.Transactional;
@@ -14,6 +16,8 @@ import org.springframework.stereotype.Component;
 public class NotificationConsumer {
 
     private final NotificationRepository notificationRepository;
+    private final CustomerClient customerClient;
+    private final EmailService emailService;
 
     @KafkaListener(topics = "order.created", groupId = "notification-service")
     @Transactional
@@ -29,6 +33,11 @@ public class NotificationConsumer {
                 .isRead(false)
                 .build();
         notificationRepository.save(notification);
+
+        var customer = customerClient.getCustomerById(event.getCustomerId());
+        if (customer != null) {
+            emailService.sendOrderPlaced(customer.email(), customer.firstname(), reference, event.getAmount());
+        }
     }
 
     @KafkaListener(topics = "payment.processed", groupId = "notification-service")
@@ -47,5 +56,10 @@ public class NotificationConsumer {
                 .isRead(false)
                 .build();
         notificationRepository.save(notification);
+
+        var customer = customerClient.getCustomerById(event.getCustomerId());
+        if (customer != null) {
+            emailService.sendOrderConfirmation(customer.email(), customer.firstname(), ref, event.getAmount());
+        }
     }
 }
