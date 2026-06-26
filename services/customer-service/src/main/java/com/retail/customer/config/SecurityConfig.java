@@ -39,7 +39,8 @@ public class SecurityConfig {
                     "/auth/refresh",
                     "/auth/forgot-password",
                     "/auth/reset-password",
-                    "/actuator/**"
+                    "/actuator/**",
+                    "/internal/**"
                 ).permitAll()
                 .anyRequest().authenticated()
             )
