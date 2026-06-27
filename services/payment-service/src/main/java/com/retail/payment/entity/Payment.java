@@ -43,6 +43,7 @@ public class Payment {
     private String stripeSessionId;
     private String stripePaymentIntentId;
     private String orderReference;
+    private String customerEmail;
 
     @CreatedDate
     @Column(updatable = false)

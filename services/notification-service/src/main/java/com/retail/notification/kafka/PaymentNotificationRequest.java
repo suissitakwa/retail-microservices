@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 public class PaymentNotificationRequest {
     private Integer orderId;
     private Integer customerId;
+    private String  customerEmail;
     private String  orderReference;
     private BigDecimal amount;
     private String  paymentMethod;

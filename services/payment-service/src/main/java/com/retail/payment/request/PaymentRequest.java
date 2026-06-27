@@ -11,5 +11,6 @@ public record PaymentRequest(
         @NotNull @Positive BigDecimal amount,
         String currency,
         String orderReference,
-        String stripeSessionId
+        String stripeSessionId,
+        String customerEmail
 ) {}

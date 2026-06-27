@@ -8,6 +8,7 @@ import java.util.List;
 public class OrderEvent {
     private Integer orderId;
     private Integer customerId;
+    private String customerEmail;
     private BigDecimal amount;
     private List<OrderEventItem> items;
 }

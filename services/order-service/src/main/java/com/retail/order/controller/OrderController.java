@@ -24,7 +24,7 @@ public class OrderController {
     /** Create Stripe session + save order + publish Kafka event */
     @PostMapping("/checkout")
     public ResponseEntity<CheckoutResponse> checkout(Authentication auth) throws Exception {
-        return ResponseEntity.ok(orderService.checkout(customerId(auth)));
+        return ResponseEntity.ok(orderService.checkout(customerId(auth), auth.getName()));
     }
 
     @GetMapping("/my-orders")

@@ -26,6 +26,7 @@ public class PaymentService {
         Payment payment = Payment.builder()
                 .orderId(request.orderId())
                 .customerId(request.customerId())
+                .customerEmail(request.customerEmail())
                 .amount(request.amount())
                 .currency(request.currency() != null ? request.currency() : "USD")
                 .orderReference(request.orderReference())
@@ -62,6 +63,7 @@ public class PaymentService {
         paymentProducer.sendPaymentConfirmation(new PaymentNotificationRequest(
                 payment.getOrderId(),
                 payment.getCustomerId(),
+                payment.getCustomerEmail(),
                 payment.getOrderReference(),
                 payment.getAmount(),
                 "STRIPE"

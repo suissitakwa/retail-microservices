@@ -47,7 +47,7 @@ public class OrderService {
     // ── Checkout ────────────────────────────────────────────────────────────
 
     @Transactional
-    public CheckoutResponse checkout(Integer customerId) throws Exception {
+    public CheckoutResponse checkout(Integer customerId, String customerEmail) throws Exception {
         Cart cart = cartService.findCart(customerId);
 
         if (cart.getItems().isEmpty()) {
@@ -107,7 +107,7 @@ public class OrderService {
                 .map(oi -> new OrderEventItem(oi.getProductId(), oi.getQuantity()))
                 .toList();
         orderProducer.sendOrderCreatedEvent(new OrderEvent(
-                saved.getId(), customerId, total, eventItems));
+                saved.getId(), customerId, customerEmail, total, eventItems));
 
         log.info("Checkout complete: orderId={} stripeSession={}", saved.getId(), session.getId());
         return new CheckoutResponse(session.getUrl(), saved.getId());
