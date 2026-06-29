@@ -4,9 +4,9 @@
 
 Spring Boot 4 / Java 21 microservices layer for the retail platform. These services run alongside (and progressively replace) the Spring Boot monolith at `../retail/`.
 
-## All 5 services running — Eureka dashboard
+## All 8 services running — Eureka dashboard
 
-![Eureka dashboard — all 5 services UP](docs/screenshots/eureka-dashboard.png)
+![Eureka dashboard — all services UP](docs/screenshots/eureka-dashboard.png)
 
 ## Services
 
@@ -88,12 +88,12 @@ cd services/copilot-service  && ./mvnw spring-boot:run
 ```
 Order checkout
   → order-service publishes order.created
-      → notification-service: saves ORDER_PLACED notification
+      → notification-service: saves ORDER_PLACED notification + sends order-placed email
       → retail monolith: decrements inventory
 
 Stripe webhook (payment_intent.succeeded)
   → payment-service publishes payment.processed
-      → notification-service: saves PAYMENT_PAID notification
+      → notification-service: saves PAYMENT_PAID notification + sends payment-confirmed email
       → retail monolith: marks payment PAID
 ```
 
