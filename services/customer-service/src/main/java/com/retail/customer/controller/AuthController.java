@@ -1,5 +1,6 @@
 package com.retail.customer.controller;
 
+import com.retail.customer.email.EmailService;
 import com.retail.customer.entity.Customer;
 import com.retail.customer.enums.Role;
 import com.retail.customer.jwt.JwtService;
@@ -10,6 +11,7 @@ import com.retail.customer.request.RegisterRequest;
 import com.retail.customer.response.AuthResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -32,6 +34,10 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final EmailService emailService;
+
+    @Value("${app.frontend.base-url:http://localhost:3000}")
+    private String frontendBaseUrl;
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@RequestBody @Valid RegisterRequest request) {
@@ -89,7 +95,8 @@ public class AuthController {
             customer.setResetToken(token);
             customer.setResetTokenExpiry(LocalDateTime.now().plusHours(1));
             customerRepository.save(customer);
-            // TODO: send email with reset link
+            String resetLink = frontendBaseUrl + "/reset-password?token=" + token;
+            emailService.sendPasswordReset(customer.getEmail(), customer.getFirstname(), resetLink);
         });
         return ResponseEntity.ok().build();
     }
