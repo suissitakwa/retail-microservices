@@ -4,16 +4,13 @@
 
 Spring Boot 4 / Java 21 microservices layer for the retail platform. These services run alongside (and progressively replace) the Spring Boot monolith at `../retail/`.
 
-## All 8 services running — Eureka dashboard
-
-![Eureka dashboard — all services UP](docs/screenshots/eureka-dashboard.png)
-
 ## Services
 
-| Service | Port | DB Port | Status |
+| Service | Port | DB Port | Purpose |
 |---|---|---|---|
-| config-server | 8888 | — | Infrastructure |
-| discovery (Eureka) | 8761 | — | Infrastructure |
+| config-server | 8888 | — | Infrastructure — serves config to all services |
+| discovery (Eureka) | 8761 | — | Infrastructure — service registry |
+| **api-gateway** | **8090** | — | **Single entry point — routes all client traffic** |
 | customer-service | 8083 | 5435 | Auth + profiles — only JWT issuer |
 | payment-service | 8082 | 5434 | Payment lifecycle + Kafka |
 | product-service | 8084 | 5436 | Products, categories, inventory (Redis cached) |
@@ -64,6 +61,7 @@ cd services/product-service  && ./mvnw spring-boot:run
 cd services/order-service    && ./mvnw spring-boot:run
 cd services/notification-service && ./mvnw spring-boot:run
 cd services/copilot-service  && ./mvnw spring-boot:run
+cd services/api-gateway      && ./mvnw spring-boot:run   # after discovery
 ```
 
 ## Architecture
@@ -99,11 +97,13 @@ Stripe webhook (payment_intent.succeeded)
 
 ### Service Ports Reference
 
-| Service | Swagger UI |
+| Endpoint | URL |
 |---|---|
-| customer-service | http://localhost:8083/swagger-ui.html |
-| product-service | http://localhost:8084/swagger-ui.html |
-| order-service | http://localhost:8085/swagger-ui.html |
-| notification-service | http://localhost:8086/swagger-ui.html |
+| **API Gateway** | http://localhost:8090 |
+| customer-service Swagger | http://localhost:8083/swagger-ui.html |
+| product-service Swagger | http://localhost:8084/swagger-ui.html |
+| order-service Swagger | http://localhost:8085/swagger-ui.html |
+| notification-service Swagger | http://localhost:8086/swagger-ui.html |
+| Gateway routes | http://localhost:8090/actuator/gateway/routes |
 | Eureka dashboard | http://localhost:8761 |
 | Config server health | http://localhost:8888/actuator/health |

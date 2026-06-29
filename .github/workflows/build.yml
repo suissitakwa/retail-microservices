@@ -24,6 +24,7 @@ jobs:
           - order-service
           - notification-service
           - copilot-service
+          - api-gateway
 
     steps:
       - uses: actions/checkout@v4

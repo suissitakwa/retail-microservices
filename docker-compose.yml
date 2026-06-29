@@ -285,6 +285,25 @@ services:
       SERVER_PORT: 8082
 
   # ----------------------------------------
+  # API Gateway (single entry point — port 8090)
+  # ----------------------------------------
+  api-gateway:
+    build: ./services/api-gateway
+    container_name: api-gateway
+    ports:
+      - "8090:8090"
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery:
+        condition: service_started
+    environment:
+      SPRING_CONFIG_IMPORT: configserver:http://config-server:8888
+      EUREKA_HOST: discovery
+      APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-http://localhost:3000}
+      SERVER_PORT: 8090
+
+  # ----------------------------------------
   # Retail Database
   # ----------------------------------------
   retail-db:
