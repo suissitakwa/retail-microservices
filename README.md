@@ -35,6 +35,7 @@ JWT_SECRET_KEY=...
 STRIPE_SECRET_KEY=...
 STRIPE_WEBHOOK_SECRET=...
 OPENAI_API_KEY=...
+MAIL_PASSWORD=re_...        # Resend API key — notification-service uses this for transactional email
 APP_FRONTEND_BASE_URL=http://localhost:3000
 ```
 
@@ -86,14 +87,23 @@ cd services/api-gateway      && ./mvnw spring-boot:run   # after discovery
 ```
 Order checkout
   → order-service publishes order.created
-      → notification-service: saves ORDER_PLACED notification + sends order-placed email
+      → notification-service: saves ORDER_PLACED notification + sends order-placed email via Resend
       → retail monolith: decrements inventory
 
 Stripe webhook (payment_intent.succeeded)
   → payment-service publishes payment.processed
-      → notification-service: saves PAYMENT_PAID notification + sends payment-confirmed email
+      → notification-service: saves PAYMENT_PAID notification + sends payment-confirmed email via Resend
       → retail monolith: marks payment PAID
 ```
+
+### Transactional Email (notification-service)
+
+`notification-service` sends HTML emails via the [Resend](https://resend.com) HTTP API using Java 21's built-in `HttpClient` — no JavaMail/SMTP dependency. Emails are triggered by Kafka events, not HTTP requests, making them fully decoupled from the request lifecycle.
+
+| Kafka topic | Email sent |
+|---|---|
+| `order.created` | Order placed confirmation |
+| `payment.processed` | Payment confirmed with order reference |
 
 ### Service Ports Reference
 
