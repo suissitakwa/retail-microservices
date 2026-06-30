@@ -100,6 +100,8 @@ services:
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       EUREKA_HOST: discovery
       SERVER_PORT: 8083
+      OTLP_ENDPOINT: http://otel-lgtm:4318/v1/traces
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
 
   # ----------------------------------------
   # Product Database
@@ -142,6 +144,7 @@ services:
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       EUREKA_HOST: discovery
       SERVER_PORT: 8084
+      OTLP_ENDPOINT: http://otel-lgtm:4318/v1/traces
 
   # ----------------------------------------
   # Order Database
@@ -185,6 +188,7 @@ services:
       PRODUCT_SERVICE_URL: http://product-service:8084
       EUREKA_HOST: discovery
       SERVER_PORT: 8085
+      OTLP_ENDPOINT: http://otel-lgtm:4318/v1/traces
 
   # ----------------------------------------
   # Notification Database
@@ -225,8 +229,8 @@ services:
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       EUREKA_HOST: discovery
       SERVER_PORT: 8086
-      MAIL_USERNAME: ${MAIL_USERNAME:-}
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      OTLP_ENDPOINT: http://otel-lgtm:4318/v1/traces
 
   # ----------------------------------------
   # Copilot Service (no database)
@@ -363,16 +367,18 @@ services:
       PAYMENT_SERVICE_URL: http://payment-service:8082
 
   # ----------------------------------------
-  # Distributed Tracing
+  # Observability (traces + metrics + logs)
   # ----------------------------------------
-  zipkin:
-    image: openzipkin/zipkin:3
-    container_name: zipkin
+  otel-lgtm:
+    image: grafana/otel-lgtm:0.8.1
+    container_name: otel-lgtm
     ports:
-      - "9411:9411"
+      - "3001:3000"   # Grafana UI
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
 
   # ----------------------------------------
-  # Monitoring
+  # Prometheus (metrics scraping)
   # ----------------------------------------
   prometheus:
     image: prom/prometheus:v2.45.0
@@ -384,14 +390,6 @@ services:
     depends_on:
       - retail-app
       - payment-service
-
-  grafana:
-    image: grafana/grafana:10.0.0
-    container_name: grafana
-    ports:
-      - "3001:3000"
-    depends_on:
-      - prometheus
 
 volumes:
   postgres_data:

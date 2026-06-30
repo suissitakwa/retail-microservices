@@ -40,9 +40,9 @@ management:
   tracing:
     sampling:
       probability: 1.0
-  zipkin:
+  otlp:
     tracing:
-      endpoint: ${ZIPKIN_URL:http://localhost:9411/api/v2/spans}
+      endpoint: ${OTLP_ENDPOINT:http://localhost:4318/v1/traces}
 
 logging:
   pattern:
