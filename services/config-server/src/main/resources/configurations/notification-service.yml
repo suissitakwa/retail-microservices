@@ -21,18 +21,6 @@ spring:
       properties:
         spring.json.trusted.packages: "com.retail.*"
 
-  mail:
-    host: ${MAIL_HOST:smtp.gmail.com}
-    port: ${MAIL_PORT:587}
-    username: ${MAIL_USERNAME:noreply@example.com}
-    password: ${MAIL_PASSWORD:}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
-
 services:
   customer-url: http://${CUSTOMER_SERVICE_HOST:localhost}:8083
 
