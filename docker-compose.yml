@@ -225,6 +225,8 @@ services:
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       EUREKA_HOST: discovery
       SERVER_PORT: 8086
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
 
   # ----------------------------------------
   # Copilot Service (no database)
@@ -359,6 +361,15 @@ services:
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_CACHE_TYPE: redis
       PAYMENT_SERVICE_URL: http://payment-service:8082
+
+  # ----------------------------------------
+  # Distributed Tracing
+  # ----------------------------------------
+  zipkin:
+    image: openzipkin/zipkin:3
+    container_name: zipkin
+    ports:
+      - "9411:9411"
 
   # ----------------------------------------
   # Monitoring

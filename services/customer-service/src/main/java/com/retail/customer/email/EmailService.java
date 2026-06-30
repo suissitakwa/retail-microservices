@@ -1,33 +1,58 @@
 package com.retail.customer.email;
 
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
-import lombok.RequiredArgsConstructor;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.util.List;
+import java.util.Map;
+
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class EmailService {
 
-    private final JavaMailSender mailSender;
+    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Value("${MAIL_PASSWORD:disabled}")
+    private String resendApiKey;
+
+    @Value("${app.mail.from:NovaMart <onboarding@resend.dev>}")
+    private String fromAddress;
 
     @Async
     public void sendPasswordReset(String toEmail, String firstName, String resetLink) {
+        send(toEmail, "Reset your NovaMart password", buildHtml(firstName, resetLink));
+    }
+
+    private void send(String toEmail, String subject, String html) {
         try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setTo(toEmail);
-            helper.setSubject("Reset your NovaMart password");
-            helper.setText(buildHtml(firstName, resetLink), true);
-            mailSender.send(message);
-            log.info("Password reset email sent to {}", toEmail);
-        } catch (MessagingException e) {
-            log.warn("Failed to send password reset email to {}: {}", toEmail, e.getMessage());
+            String body = objectMapper.writeValueAsString(Map.of(
+                    "from", fromAddress,
+                    "to", List.of(toEmail),
+                    "subject", subject,
+                    "html", html
+            ));
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://api.resend.com/emails"))
+                    .header("Authorization", "Bearer " + resendApiKey)
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(body))
+                    .build();
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() >= 400) {
+                log.warn("Resend API error sending to {}: {} {}", toEmail, response.statusCode(), response.body());
+            } else {
+                log.info("Email sent to {} via Resend (status {})", toEmail, response.statusCode());
+            }
+        } catch (Exception e) {
+            log.warn("Failed to send email to {}: {}", toEmail, e.getMessage());
         }
     }
 
