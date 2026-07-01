@@ -100,6 +100,10 @@ Stripe webhook (payment_intent.succeeded)
 
 Every service is instrumented with OpenTelemetry (`micrometer-tracing-bridge-otel` + OTLP exporter). A single `traceId` propagates across process boundaries — an HTTP request into `order-service` that triggers a Kafka publish to `order.created`, consumed by `notification-service`, all shows up as one connected trace rather than isolated per-service logs. Every log line also carries `traceId`/`spanId` in its MDC context for direct trace-to-log correlation.
 
+![Example trace waterfall](docs/screenshots/tracing-waterfall.png)
+
+*Same OpenTelemetry instrumentation as the monolith, shown here — the security filter chain wraps the actual request logic, with span timings for each stage. In this multi-service stack, a single trace can extend further to show spans from separate JVM processes (e.g. `order-service` → Kafka → `notification-service`) connected by one `traceId`.*
+
 - `docker-compose up` starts `otel-lgtm` — a bundled Grafana + Tempo + Prometheus + Loki stack — reachable at `http://localhost:3001`
 - Each service exports to `OTLP_ENDPOINT` (defaults to `http://localhost:4318/v1/traces` locally, wired to `http://otel-lgtm:4318/v1/traces` in Docker Compose)
 - Sampling is 100% (`management.tracing.sampling.probability: 1.0`) since this is a demo environment, not high-throughput production
