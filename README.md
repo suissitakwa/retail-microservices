@@ -96,6 +96,16 @@ Stripe webhook (payment_intent.succeeded)
       → retail monolith: marks payment PAID
 ```
 
+### Distributed Tracing
+
+Every service is instrumented with OpenTelemetry (`micrometer-tracing-bridge-otel` + OTLP exporter). A single `traceId` propagates across process boundaries — an HTTP request into `order-service` that triggers a Kafka publish to `order.created`, consumed by `notification-service`, all shows up as one connected trace rather than isolated per-service logs. Every log line also carries `traceId`/`spanId` in its MDC context for direct trace-to-log correlation.
+
+- `docker-compose up` starts `otel-lgtm` — a bundled Grafana + Tempo + Prometheus + Loki stack — reachable at `http://localhost:3001`
+- Each service exports to `OTLP_ENDPOINT` (defaults to `http://localhost:4318/v1/traces` locally, wired to `http://otel-lgtm:4318/v1/traces` in Docker Compose)
+- Sampling is 100% (`management.tracing.sampling.probability: 1.0`) since this is a demo environment, not high-throughput production
+
+To see a cross-service trace: place an order through the full stack, then open Grafana → Explore → Tempo → TraceQL query `{}` and find the trace containing spans from both `order-service` and `notification-service`.
+
 ### Transactional Email (notification-service)
 
 `notification-service` sends HTML emails via the [Resend](https://resend.com) HTTP API using Java 21's built-in `HttpClient` — no JavaMail/SMTP dependency. Emails are triggered by Kafka events, not HTTP requests, making them fully decoupled from the request lifecycle.
