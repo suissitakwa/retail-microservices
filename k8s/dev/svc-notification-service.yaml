@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  namespace: retail-microservices-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+    spec:
+      containers:
+        - name: notification-service
+          image: suissitakwa/retail-ms-notification-service:dev-latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8086
+          env:
+            - name: SPRING_CONFIG_IMPORT
+              value: "configserver:http://config-server:8888"
+            - name: EUREKA_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: retail-ms-config
+                  key: EUREKA_HOST
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://notification-db:5432/notification_db"
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: retail-ms-secrets
+                  key: NOTIFICATION_DB_USERNAME
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: retail-ms-secrets
+                  key: NOTIFICATION_DB_PASSWORD
+            - name: JWT_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: retail-ms-secrets
+                  key: JWT_SECRET_KEY
+            - name: MAIL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: retail-ms-secrets
+                  key: MAIL_PASSWORD
+            - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+              valueFrom:
+                configMapKeyRef:
+                  name: retail-ms-config
+                  key: SPRING_KAFKA_BOOTSTRAP_SERVERS
+            - name: CUSTOMER_SERVICE_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: retail-ms-config
+                  key: CUSTOMER_SERVICE_HOST
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8086
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 18
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8086
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8086
+            periodSeconds: 20
+            failureThreshold: 3
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "150m"
+            limits:
+              memory: "512Mi"
+              cpu: "300m"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+  namespace: retail-microservices-dev
+spec:
+  selector:
+    app: notification-service
+  ports:
+    - port: 8086
+      targetPort: 8086
+  type: ClusterIP

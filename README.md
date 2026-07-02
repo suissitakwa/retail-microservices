@@ -131,3 +131,14 @@ To see a cross-service trace: place an order through the full stack, then open G
 | Gateway routes | http://localhost:8090/actuator/gateway/routes |
 | Eureka dashboard | http://localhost:8761 |
 | Config server health | http://localhost:8888/actuator/health |
+
+## Deployment (Jenkins + GKE)
+
+`k8s/dev/` and the root `Jenkinsfile` deploy the full 9-service stack to a `retail-microservices-dev` namespace — separate from the monolith's `retail-dev` namespace in `retail-infra`, so both can exist independently.
+
+- **Staged rollout, respecting real startup order**: secrets/config → databases + Redis + Kafka → `config-server` (waits for healthy) → `discovery` (waits for healthy) → the 6 business services → `api-gateway` last, since its routes depend on every business service already being registered with Eureka
+- **Health probes** (`startupProbe` → `readinessProbe` → `livenessProbe`) on every service's `/actuator/health/liveness` and `/actuator/health/readiness` — required adding `spring-boot-starter-actuator` to `config-server` (it had none) and enabling `management.endpoint.health.probes.enabled` across every service
+- **Auto-rollback on failure**: the pipeline's `post { failure { ... } }` block runs `kubectl rollout undo` across every deployment if any stage fails
+- Each business service now receives its Stripe/JWT/OpenAI/mail secrets and DB credentials via k8s `Secret` and `ConfigMap` — no `.env` file in production
+
+**Not yet done:** this hasn't been deployed to a live GKE cluster — the manifests and pipeline exist and are structurally complete, mirroring the monolith's proven `retail-infra` pattern, but `kubectl apply` against a real cluster hasn't been run yet.

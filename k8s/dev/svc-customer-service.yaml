@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: customer-service
+  namespace: retail-microservices-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: customer-service
+  template:
+    metadata:
+      labels:
+        app: customer-service
+    spec:
+      containers:
+        - name: customer-service
+          image: suissitakwa/retail-ms-customer-service:dev-latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8083
+          env:
+            - name: SPRING_CONFIG_IMPORT
+              value: "configserver:http://config-server:8888"
+            - name: EUREKA_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: retail-ms-config
+                  key: EUREKA_HOST
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://customer-db:5432/customer_db"
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: retail-ms-secrets
+                  key: CUSTOMER_DB_USERNAME
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: retail-ms-secrets
+                  key: CUSTOMER_DB_PASSWORD
+            - name: JWT_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: retail-ms-secrets
+                  key: JWT_SECRET_KEY
+            - name: MAIL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: retail-ms-secrets
+                  key: MAIL_PASSWORD
+            - name: APP_MAIL_FROM
+              valueFrom:
+                configMapKeyRef:
+                  name: retail-ms-config
+                  key: APP_MAIL_FROM
+            - name: APP_FRONTEND_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: retail-ms-config
+                  key: APP_FRONTEND_BASE_URL
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8083
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 18
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8083
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8083
+            periodSeconds: 20
+            failureThreshold: 3
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "150m"
+            limits:
+              memory: "512Mi"
+              cpu: "300m"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: customer-service
+  namespace: retail-microservices-dev
+spec:
+  selector:
+    app: customer-service
+  ports:
+    - port: 8083
+      targetPort: 8083
+  type: ClusterIP

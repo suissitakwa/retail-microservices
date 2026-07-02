@@ -1,0 +1,116 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+  namespace: retail-microservices-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-service
+  template:
+    metadata:
+      labels:
+        app: order-service
+    spec:
+      containers:
+        - name: order-service
+          image: suissitakwa/retail-ms-order-service:dev-latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8085
+          env:
+            - name: SPRING_CONFIG_IMPORT
+              value: "configserver:http://config-server:8888"
+            - name: EUREKA_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: retail-ms-config
+                  key: EUREKA_HOST
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://order-db:5432/order_db"
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: retail-ms-secrets
+                  key: ORDER_DB_USERNAME
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: retail-ms-secrets
+                  key: ORDER_DB_PASSWORD
+            - name: JWT_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: retail-ms-secrets
+                  key: JWT_SECRET_KEY
+            - name: STRIPE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: retail-ms-secrets
+                  key: STRIPE_SECRET_KEY
+            - name: STRIPE_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: retail-ms-secrets
+                  key: STRIPE_WEBHOOK_SECRET
+            - name: SPRING_KAFKA_BOOTSTRAP_SERVERS
+              valueFrom:
+                configMapKeyRef:
+                  name: retail-ms-config
+                  key: SPRING_KAFKA_BOOTSTRAP_SERVERS
+            - name: PRODUCT_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: retail-ms-config
+                  key: PRODUCT_SERVICE_URL
+            - name: PAYMENT_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: retail-ms-config
+                  key: PAYMENT_SERVICE_URL
+            - name: APP_FRONTEND_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: retail-ms-config
+                  key: APP_FRONTEND_BASE_URL
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8085
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 18
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8085
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8085
+            periodSeconds: 20
+            failureThreshold: 3
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "150m"
+            limits:
+              memory: "512Mi"
+              cpu: "300m"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+  namespace: retail-microservices-dev
+spec:
+  selector:
+    app: order-service
+  ports:
+    - port: 8085
+      targetPort: 8085
+  type: ClusterIP

@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: retail-ms-redis-pvc
+  namespace: retail-microservices-dev
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: retail-ms-redis
+  namespace: retail-microservices-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: retail-ms-redis
+  template:
+    metadata:
+      labels:
+        app: retail-ms-redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          command: ["redis-server", "--appendonly", "yes"]
+          ports:
+            - containerPort: 6379
+          volumeMounts:
+            - name: redis-storage
+              mountPath: /data
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+      volumes:
+        - name: redis-storage
+          persistentVolumeClaim:
+            claimName: retail-ms-redis-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: retail-ms-redis
+  namespace: retail-microservices-dev
+spec:
+  selector:
+    app: retail-ms-redis
+  ports:
+    - port: 6379
+      targetPort: 6379
+  type: ClusterIP
