@@ -27,4 +27,14 @@ public class OrderClient {
                 .retrieve()
                 .body(Map.class);
     }
+
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> getMyOrders(int limit, String bearerToken) {
+        log.info("Fetching up to {} recent orders from order-service", limit);
+        return restClient.get()
+                .uri(orderServiceUrl + "/api/v1/orders/my-orders?page=0&size=" + limit)
+                .header("Authorization", bearerToken)
+                .retrieve()
+                .body(Map.class);
+    }
 }
