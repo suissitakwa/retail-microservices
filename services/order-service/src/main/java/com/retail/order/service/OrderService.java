@@ -37,6 +37,7 @@ public class OrderService {
     private final CartRepository  cartRepository;
     private final CartService     cartService;
     private final OrderProducer   orderProducer;
+    private final PaymentClient   paymentClient;
 
     @Value("${stripe.secret-key}")
     private String stripeSecretKey;
@@ -102,6 +103,11 @@ public class OrderService {
         saved.setStripeSessionId(session.getId());
         orderRepository.save(saved);
 
+        // Create the PENDING payment in payment-service so the webhook flow can confirm it
+        // later without depending on the monolith.
+        paymentClient.createPayment(saved.getId(), customerId, total, saved.getReference(),
+                session.getId(), customerEmail);
+
         // Publish order.created Kafka event
         List<OrderEventItem> eventItems = saved.getOrderItems().stream()
                 .map(oi -> new OrderEventItem(oi.getProductId(), oi.getQuantity()))
@@ -162,11 +168,20 @@ public class OrderService {
 
     @Transactional
     public void markCompleted(String paymentIntentId) {
-        orderRepository.findByStripePaymentIntentId(paymentIntentId).ifPresent(order -> {
+        orderRepository.findByStripePaymentIntentIdForUpdate(paymentIntentId).ifPresentOrElse(order -> {
+            if (order.getStatus() == OrderStatus.COMPLETED) {
+                log.debug("Order {} already COMPLETED, skipping duplicate webhook", order.getId());
+                return;
+            }
             order.setStatus(OrderStatus.COMPLETED);
             orderRepository.save(order);
             log.info("Order {} marked COMPLETED via paymentIntent={}", order.getId(), paymentIntentId);
-        });
+
+            Integer paymentId = paymentClient.findPaymentIdByOrderId(order.getId());
+            if (paymentId != null) {
+                paymentClient.confirmPayment(paymentId, paymentIntentId);
+            }
+        }, () -> log.warn("No order found for paymentIntentId={}", paymentIntentId));
     }
 
     // ── Mapper ───────────────────────────────────────────────────────────────
