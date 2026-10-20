@@ -307,7 +307,43 @@ services:
       SPRING_CONFIG_IMPORT: configserver:http://config-server:8888
       EUREKA_HOST: discovery
       APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-http://localhost:3000}
+      RECOVERY_AGENT_URL: http://recovery-agent:8088
       SERVER_PORT: 8090
+
+  # ----------------------------------------
+  # Recovery Agent Database (pgvector)
+  # ----------------------------------------
+  recovery-db:
+    image: pgvector/pgvector:pg16
+    container_name: recovery-postgres-db
+    environment:
+      POSTGRES_USER: recovery_user
+      POSTGRES_PASSWORD: ${RECOVERY_DB_PASSWORD:-recovery_password}
+      POSTGRES_DB: recovery_db
+    ports:
+      - "5439:5432"
+    volumes:
+      - recovery_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U recovery_user -d recovery_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ----------------------------------------
+  # Recovery Agent (Python / FastAPI)
+  # ----------------------------------------
+  recovery-agent:
+    build: ./services/recovery-agent
+    container_name: recovery-agent
+    ports:
+      - "8088:8088"
+    depends_on:
+      recovery-db:
+        condition: service_healthy
+    environment:
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      DATABASE_URL: postgresql://recovery_user:${RECOVERY_DB_PASSWORD:-recovery_password}@recovery-db:5432/recovery_db
 
   # ----------------------------------------
   # Retail Database
@@ -398,5 +434,6 @@ volumes:
   product_postgres_data:
   order_postgres_data:
   notification_postgres_data:
+  recovery_postgres_data:
   kafka_data:
   redis_data:
