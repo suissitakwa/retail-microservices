@@ -17,6 +17,7 @@ Spring Boot 4 / Java 21 microservices layer for the retail platform. These servi
 | order-service | 8085 | 5437 | Cart, orders, Stripe checkout |
 | notification-service | 8086 | 5438 | Kafka consumers, notification REST API |
 | copilot-service | 8087 | — | OpenAI GPT-4o-mini assistant |
+| recovery-agent | 8088 | 5439 | Python/FastAPI — investigates order/payment inconsistencies (in progress) |
 
 ## Quick Start
 
@@ -81,6 +82,20 @@ cd services/api-gateway      && ./mvnw spring-boot:run   # after discovery
 ### JWT
 
 `customer-service` is the **only** service that issues JWTs. All other services validate the token stateless (no DB call) — the role is embedded in the token claims as `[{authority: "ROLE_CUSTOMER"}]`.
+
+### API Gateway routes
+
+Spring Cloud 2025.1 reads gateway configuration only under `spring.cloud.gateway.server.webflux.*`; the older `spring.cloud.gateway.routes` key is silently ignored, which leaves the gateway running with no routes (every path 404s). `configurations/api-gateway.yml` uses the new prefix. Business services are routed by `lb://<service>` through Eureka; `recovery-agent` is not registered with Eureka and is routed by `RECOVERY_AGENT_URL` (default `http://localhost:8088`).
+
+### Recovery Agent (in progress)
+
+`services/recovery-agent` is a Python 3.12 / FastAPI service that will investigate orders stuck between `order-service` and `payment-service` and propose one human-approved recovery action. Design, scope and progress live in [`docs/recovery-agent/`](docs/recovery-agent/PLAN.md).
+
+```bash
+cd services/recovery-agent && uv sync && uv run pytest       # unit tests
+docker compose up -d --build recovery-db recovery-agent        # :8088, pgvector DB on :5439
+scripts/recovery/gateway_auth_check.sh                         # 401 without token, 200 with a customer-service token via the gateway
+```
 
 ### Kafka Event Flow
 

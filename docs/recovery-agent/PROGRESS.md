@@ -4,7 +4,7 @@ Each run takes the first unchecked day. A day is checked only when its **Done wh
 
 - [x] Day 1 — ADR + reproduction
 - [x] Day 2 — Scenario seeds
-- [ ] Day 3 — Service scaffold
+- [x] Day 3 — Service scaffold
 - [ ] Day 4 — Typed reads + evidence + event observer
 - [ ] Day 5 — Rules + baseline + runbooks
 - [ ] Day 6 — Retrieval + structured diagnosis
@@ -20,6 +20,15 @@ Each run takes the first unchecked day. A day is checked only when its **Done wh
 ## Log
 
 <!-- Newest first. One entry per run: date, day, status (done / partial / blocked), what changed, test results, blockers, next step. -->
+
+### 2026-10-19 — Day 3 — done
+- **Changed:** `services/recovery-agent/` (pyproject + uv.lock, FastAPI app, `auth.py`, `config.py`, Dockerfile, tests), `docker-compose.yml` (`recovery-db` pgvector on 5439, `recovery-agent` on 8088, `RECOVERY_AGENT_URL` for the gateway), `configurations/api-gateway.yml` (recovery route + prefix fix), `scripts/recovery/gateway_auth_check.sh`, README.
+- **Tests:** `uv run pytest` → 18 passed; `uv run ruff check .` → clean. Container `recovery-agent` reports `healthy`.
+- **Done-when:** `scripts/recovery/gateway_auth_check.sh` → without token `401`, with a real customer-service token `200 {"status":"UP","subject":"recovery-check@example.test","roles":["ROLE_CUSTOMER"]}`, `GATEWAY AUTH OK`. Stack: config-server, discovery, customer-service, api-gateway (mvnw) + recovery-agent/recovery-db (compose).
+- **Pre-existing bug found and fixed:** the gateway (Spring Cloud 2025.1, `gateway-server-webflux`) had **no routes at all** — every path returned 404, including `/auth/**`. 2025.1 reads only `spring.cloud.gateway.server.webflux.*`; `api-gateway.yml` used the old `spring.cloud.gateway.routes`/`globalcors` keys. Moved both under `server.webflux`. Verified `/auth/login` works through the gateway after the fix.
+- **Token format confirmed:** customer-service signs HS256 with the secret's raw UTF-8 bytes (`Keys.hmacShaKeyFor(secret.getBytes())`), `sub` = email, `role` = `[{"authority": "ROLE_…"}]`.
+- **Still open:** `/actuator/gateway/routes` returns 404 (README links it) — the actuator gateway endpoint isn't exposed under Boot 4; not needed for this plan.
+- **Next:** Day 4 — typed read clients (`get_order`, `get_payment`, `get_processing_history`), evidence snapshot table, Kafka observer.
 
 ### 2026-10-19 — Day 2 — done
 - **Changed:** `scripts/recovery/seed.sh` (new), `scripts/recovery/SCENARIOS.md` (seed section + per-scenario table).
