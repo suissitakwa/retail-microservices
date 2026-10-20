@@ -15,7 +15,27 @@ Each scenario is a seeded order the agent must investigate. "Expected" is what a
 | Script | Status |
 |---|---|
 | `repro_s1.sh` | Day 1 — reproduces S1 through the real webhook path |
-| `seed.sh` | Day 2 — seeds S1–S5 and prints their order IDs |
+| `seed.sh` | Day 2 — seeds S1–S5 directly in the DBs (idempotent) and prints their order IDs |
+
+### `seed.sh`
+
+Writes the end state of each scenario straight into `order-db` and `payment-db`, with stable IDs for eval cases.
+Only the two DB containers need to be running (`docker start order-postgres-db payment-postgres-db`); the tables must
+already exist, so start order-service and payment-service once beforehand on a fresh volume. Each run deletes and
+re-creates only its own rows (references `RCV-S*`), then reads them back and exits non-zero on any mismatch.
+
+| Scenario | Order (id · status · total · intent) | Payment (status · amount · intent) |
+|---|---|---|
+| S1 | 800001 · `COMPLETED` · 42.50 · `pi_rcv_s1` | `PENDING` · 42.50 · none |
+| S2 | 800002 · `PENDING` · 30.00 · `pi_rcv_s2` | `PAID` · 30.00 · `pi_rcv_s2` |
+| S3 | 800003 · `COMPLETED` · 25.00 · `pi_rcv_s3` | `PAID` · 25.00 · `pi_rcv_s3` |
+| S4 | 800004 · `COMPLETED` · 18.00 · `pi_rcv_s4` | `PAID` · 18.00 · `pi_rcv_s4` |
+| S5 | 800005 · `COMPLETED` · 60.00 · `pi_rcv_s5_a` | `PENDING` · 55.00 · `pi_rcv_s5_b` |
+
+S1's payment has no intent ID because in the real failure the payment lookup failed before the intent was attached
+(see the Day 1 log). S3 seeds only the consistent end state; replaying the webhook is covered by the Day 9 tests.
+S4's "inventory not decremented" claim belongs to the eval case, not the data. `repro_s1.sh` remains the way to produce
+S1 through the real webhook path.
 
 ### `repro_s1.sh`
 
