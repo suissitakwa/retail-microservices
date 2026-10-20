@@ -4,48 +4,51 @@ server:
 spring:
   cloud:
     gateway:
-      globalcors:
-        cors-configurations:
-          '[/**]':
-            allowedOrigins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:3000}
-            allowedMethods: "GET,POST,PUT,PATCH,DELETE,OPTIONS"
-            allowedHeaders: "*"
-            allowCredentials: true
-      routes:
-        - id: customer-auth
-          uri: lb://customer-service
-          predicates:
-            - Path=/auth/**
+      # Spring Cloud 2025.1 reads gateway config only under server.webflux
+      server:
+        webflux:
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowedOrigins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:3000}
+                allowedMethods: "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+                allowedHeaders: "*"
+                allowCredentials: true
+          routes:
+            - id: customer-auth
+              uri: lb://customer-service
+              predicates:
+                - Path=/auth/**
 
-        - id: customer-service
-          uri: lb://customer-service
-          predicates:
-            - Path=/api/v1/customers/**
+            - id: customer-service
+              uri: lb://customer-service
+              predicates:
+                - Path=/api/v1/customers/**
 
-        - id: product-service
-          uri: lb://product-service
-          predicates:
-            - Path=/api/v1/products/**, /api/v1/categories/**, /api/v1/inventory/**
+            - id: product-service
+              uri: lb://product-service
+              predicates:
+                - Path=/api/v1/products/**, /api/v1/categories/**, /api/v1/inventory/**
 
-        - id: order-service
-          uri: lb://order-service
-          predicates:
-            - Path=/api/v1/cart/**, /api/v1/orders/**
+            - id: order-service
+              uri: lb://order-service
+              predicates:
+                - Path=/api/v1/cart/**, /api/v1/orders/**
 
-        - id: payment-service
-          uri: lb://payment-service
-          predicates:
-            - Path=/api/v1/payments/**
+            - id: payment-service
+              uri: lb://payment-service
+              predicates:
+                - Path=/api/v1/payments/**
 
-        - id: notification-service
-          uri: lb://notification-service
-          predicates:
-            - Path=/api/v1/notifications/**
+            - id: notification-service
+              uri: lb://notification-service
+              predicates:
+                - Path=/api/v1/notifications/**
 
-        - id: copilot-service
-          uri: lb://copilot-service
-          predicates:
-            - Path=/api/v1/copilot/**
+            - id: copilot-service
+              uri: lb://copilot-service
+              predicates:
+                - Path=/api/v1/copilot/**
 
 eureka:
   client:
@@ -60,6 +63,8 @@ management:
       exposure:
         include: health,info,gateway
   endpoint:
+    gateway:
+      access: read-only
     health:
       probes:
         enabled: true

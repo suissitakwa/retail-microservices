@@ -132,6 +132,8 @@ To see a cross-service trace: place an order through the full stack, then open G
 | Eureka dashboard | http://localhost:8761 |
 | Config server health | http://localhost:8888/actuator/health |
 
+Gateway routes live in `configurations/api-gateway.yml` under `spring.cloud.gateway.server.webflux` — Spring Cloud 2025.1 silently ignores the old `spring.cloud.gateway.routes` prefix, which leaves the gateway with zero routes and every request returning 404. The `/actuator/gateway/routes` endpoint is exposed read-only (`management.endpoint.gateway.access: read-only`), so routes can be inspected but not modified or refreshed over HTTP.
+
 ## Deployment (Jenkins + GKE)
 
 `k8s/dev/` and the root `Jenkinsfile` deploy the full 9-service stack to a `retail-microservices-dev` namespace — separate from the monolith's `retail-dev` namespace in `retail-infra`, so both can exist independently.
