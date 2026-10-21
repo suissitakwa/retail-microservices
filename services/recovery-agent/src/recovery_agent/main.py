@@ -11,11 +11,13 @@ from psycopg_pool import AsyncConnectionPool
 from pydantic import BaseModel, Field
 
 from recovery_agent.auth import ROLE_ADMIN, Principal, current_principal, require_role
+from recovery_agent.baseline import baseline_result
 from recovery_agent.clients import ServiceClients, SourceForbidden
 from recovery_agent.config import get_settings
 from recovery_agent.db import apply_schema, load_investigation_input
 from recovery_agent.evidence import gather_investigation_input
 from recovery_agent.observer import EventObserver, build_consumer
+from recovery_agent.rules import Concern, classify
 
 log = logging.getLogger(__name__)
 
@@ -91,15 +93,32 @@ async def create_investigation_input(
         raise HTTPException(status.HTTP_403_FORBIDDEN, f"{e.source} rejected the caller's token") from e
 
 
+async def _load_input(pool: AsyncConnectionPool, input_id: UUID) -> dict:
+    async with pool.connection() as conn:
+        row = await load_investigation_input(conn, input_id)
+    if row is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "investigation input not found")
+    return row
+
+
 @app.get("/api/v1/recovery/investigation-inputs/{input_id}")
 async def get_investigation_input(
     input_id: UUID,
     _: Annotated[Principal, Depends(require_role(ROLE_ADMIN))],
     pool: Annotated[AsyncConnectionPool, Depends(get_pool)],
 ) -> dict:
-    async with pool.connection() as conn:
-        row = await load_investigation_input(conn, input_id)
-    if row is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "investigation input not found")
+    row = await _load_input(pool, input_id)
     return {"id": str(row["id"]), "orderId": row["order_id"], "requestedBy": row["requested_by"],
             "createdAt": row["created_at"].isoformat(), "evidenceIds": row["evidence_ids"], **row["snapshot"]}
+
+
+@app.get("/api/v1/recovery/investigation-inputs/{input_id}/baseline")
+async def get_baseline(
+    input_id: UUID,
+    _: Annotated[Principal, Depends(require_role(ROLE_ADMIN))],
+    pool: Annotated[AsyncConnectionPool, Depends(get_pool)],
+    concern: Concern = Concern.PAYMENT,
+) -> dict:
+    """Rules + template result for a stored input — no model call."""
+    row = await _load_input(pool, input_id)
+    return {"inputId": str(row["id"]), **baseline_result(row["order_id"], classify(row["snapshot"], concern))}

@@ -12,6 +12,10 @@ RUN uv sync --frozen --no-dev --no-install-project
 COPY src ./src
 RUN uv sync --frozen --no-dev
 
+# Retrieval corpus only — runbooks_eval/ (prompt-injection fixtures) is deliberately not copied
+COPY runbooks ./runbooks
+ENV RUNBOOK_DIR=/app/runbooks
+
 RUN useradd --system --uid 1001 app
 USER app
 

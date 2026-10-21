@@ -64,6 +64,23 @@ async def test_stores_snapshot_with_record_ids_from_every_source(api, db_pool):
 
 
 @respx.mock
+async def test_baseline_endpoint_classifies_a_stored_input_without_a_model(api):
+    respx.get(ORDER_ROUTE).respond(json=ORDER_JSON)
+    respx.get(PAYMENTS_ROUTE).respond(json=[PAYMENT_JSON])
+    input_id = (await api.post("/api/v1/recovery/investigation-inputs", json={"orderId": 800001},
+                               headers=admin())).json()["id"]
+
+    r = await api.get(f"/api/v1/recovery/investigation-inputs/{input_id}/baseline", headers=admin())
+    assert r.status_code == 200
+    assert r.json()["finding"] == "ORDER_PAYMENT_MISMATCH"
+    assert r.json()["evidenceIds"] == ["order:800001", "payment:13"]
+
+    inv = await api.get(f"/api/v1/recovery/investigation-inputs/{input_id}/baseline?concern=INVENTORY",
+                        headers=admin())
+    assert inv.json()["finding"] == "INSUFFICIENT_EVIDENCE"
+
+
+@respx.mock
 async def test_unavailable_source_is_recorded_not_omitted(api):
     respx.get(ORDER_ROUTE).respond(json=ORDER_JSON)
     respx.get(PAYMENTS_ROUTE).mock(side_effect=httpx.ConnectError("refused"))
