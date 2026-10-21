@@ -344,6 +344,9 @@ services:
     environment:
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       DATABASE_URL: postgresql://recovery_user:${RECOVERY_DB_PASSWORD:-recovery_password}@recovery-db:5432/recovery_db
+      ORDER_SERVICE_URL: http://order-service:8085
+      PAYMENT_SERVICE_URL: http://payment-service:8082
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
 
   # ----------------------------------------
   # Retail Database
