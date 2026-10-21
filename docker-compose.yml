@@ -347,6 +347,7 @@ services:
       ORDER_SERVICE_URL: http://order-service:8085
       PAYMENT_SERVICE_URL: http://payment-service:8082
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}   # unset → rules baseline only
 
   # ----------------------------------------
   # Retail Database
