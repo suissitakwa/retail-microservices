@@ -7,7 +7,7 @@ Each run takes the first unchecked day. A day is checked only when its **Done wh
 - [x] Day 3 — Service scaffold
 - [x] Day 4 — Typed reads + evidence + event observer
 - [x] Day 5 — Rules + baseline + runbooks
-- [ ] Day 6 — Retrieval + structured diagnosis
+- [x] Day 6 — Retrieval + structured diagnosis
 - [ ] Day 7 — Eval set
 - [ ] Day 8 — Eval runner + benchmark
 - [ ] Day 9 — Java: recovery request + idempotency
@@ -20,6 +20,17 @@ Each run takes the first unchecked day. A day is checked only when its **Done wh
 ## Log
 
 <!-- Newest first. One entry per run: date, day, status (done / partial / blocked), what changed, test results, blockers, next step. -->
+
+### 2026-10-21 — Day 6 — done
+- **Changed:** `retrieval.py` (one chunk per `##` section, content-derived chunk IDs, incremental sync into `PGVectorStore` v2 via our own SQLAlchemy `AsyncEngine`), `diagnosis.py` (strict `DiagnosisOutput` schema, system prompt that marks runbooks as untrusted, `validate()`, `OpenAIDiagnoser` with `json_schema` strict mode), `graph.py` (LangGraph `StateGraph`: facts → rules → retrieve → diagnose → validate, per-node timings, trace), `investigation` table, `POST /api/v1/recovery/investigations` + `GET …/{id}?include_trace=true`, config for model/embeddings (no key → rules baseline only), `scripts/recovery/investigate.sh`. Deps: langgraph 1.2, langchain-openai 1.7, langchain-postgres 0.0.19, langchain-text-splitters 1.1.
+- **Validation contract:** model output is used only if its finding equals the rules finding, every cited ID is in the snapshot, at least one is cited, the runbook was actually retrieved, and the action is the rules' allowed action or null. Otherwise the rules baseline is returned with `fallbackReason`. Manual review is never relaxed by the model.
+- **Tests:** `uv run pytest` → 99 passed (19 new: chunking and stable IDs, incremental sync + search on real pgvector with a deterministic fake embedding, end-to-end graph with fake model/retriever — valid output, 4 kinds of rejected output, action proposed on a conflict, model declining to act, model error, no records → no model call, no model configured, concern routing, prompt structure, injected runbook stays inside its delimiters). No test calls OpenAI. `ruff` clean.
+- **Ingestion:** 21 chunks from 5 runbooks, 1536-dim `text-embedding-3-small`.
+- **Done-when (real gpt-4o-mini):** S1 → `ORDER_PAYMENT_MISMATCH`, source `model`, evidence `order:800001`, `payment:28` (both in the snapshot), runbook `RB-001` (all 4 retrieved chunks were RB-001), action `RECONCILE_PAYMENT_CONFIRMATION`, validation ok, 4.7 s end to end, 1397 in / 128 out tokens.
+- **Also run:** S5 → `CONFLICTING_EVIDENCE`, RB-003, no action. S4 (INVENTORY) → `INSUFFICIENT_EVIDENCE`, RB-004, no action. A cold-start S1 run hit the order-service timeout; the rules returned `INSUFFICIENT_EVIDENCE` and the model correctly explained the unavailable source with RB-004 — the abstention path works live.
+- **Quality issue for Day 7–8:** S4's `uncertainty` blamed missing *event* records instead of the real gap (no order-linked inventory source). It passes validation — the eval needs an explanation-faithfulness check, not just structural checks.
+- **Latency note:** cold first calls are dominated by service warm-up (`facts` 5.8 s) and the first embedding call (`retrieve` 3.6 s); warm runs are ~2 s facts, ~0.6 s retrieve, ~2.2 s model.
+- **Next:** Day 7 — 35 labeled eval cases (20 dev / 15 held-out, frozen), schema validation, held-out excluded from retrieval.
 
 ### 2026-10-20 — Day 5 — done
 - **Changed:** `rules.py` (finding codes, precedence: unusable evidence → conflicting evidence → status patterns → consistent; `RECONCILE_PAYMENT_CONFIRMATION` is allowed only for `ORDER_PAYMENT_MISMATCH` with an order intent ID to re-verify), `baseline.py` (template explanation + deterministic finding→runbook map), `runbooks.py` (front-matter loader that refuses `eval_only` files), `runbooks/RB-001…RB-005`, `runbooks_eval/RB-X01-injected-refund.md` (prompt-injection fixture, excluded from the image), `GET /api/v1/recovery/investigation-inputs/{id}/baseline?concern=PAYMENT|INVENTORY`, `scripts/recovery/rules_check.sh`, Dockerfile copies `runbooks/` only and sets `RUNBOOK_DIR`.
