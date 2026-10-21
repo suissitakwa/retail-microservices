@@ -49,6 +49,11 @@ public class PaymentService {
         return toResponse(payment);
     }
 
+    /** Every payment row for the order — order_id is not unique, so reconciliation must see all of them. */
+    public java.util.List<PaymentResponse> listByOrderId(Integer orderId) {
+        return paymentRepository.findAllByOrderIdOrderByIdAsc(orderId).stream().map(this::toResponse).toList();
+    }
+
     @Transactional
     public PaymentResponse confirmPayment(Integer id, String stripePaymentIntentId) {
         Payment payment = findById(id);
@@ -99,7 +104,8 @@ public class PaymentService {
                 p.getOrderReference(),
                 p.getStripeSessionId(),
                 p.getStripePaymentIntentId(),
-                p.getCreatedAt()
+                p.getCreatedAt(),
+                p.getUpdatedAt()
         );
     }
 }

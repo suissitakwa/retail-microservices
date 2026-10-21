@@ -36,6 +36,11 @@ public class PaymentController {
         return ResponseEntity.ok(paymentService.getByOrderId(orderId));
     }
 
+    @GetMapping("/order/{orderId}/all")
+    public java.util.List<PaymentResponse> listByOrderId(@PathVariable Integer orderId) {
+        return paymentService.listByOrderId(orderId);
+    }
+
     /** Called by the monolith after Stripe payment_intent.succeeded webhook */
     @PatchMapping("/{id}/confirm")
     public ResponseEntity<PaymentResponse> confirm(
