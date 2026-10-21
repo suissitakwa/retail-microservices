@@ -6,7 +6,7 @@ Each run takes the first unchecked day. A day is checked only when its **Done wh
 - [x] Day 2 — Scenario seeds
 - [x] Day 3 — Service scaffold
 - [x] Day 4 — Typed reads + evidence + event observer
-- [ ] Day 5 — Rules + baseline + runbooks
+- [x] Day 5 — Rules + baseline + runbooks
 - [ ] Day 6 — Retrieval + structured diagnosis
 - [ ] Day 7 — Eval set
 - [ ] Day 8 — Eval runner + benchmark
@@ -20,6 +20,14 @@ Each run takes the first unchecked day. A day is checked only when its **Done wh
 ## Log
 
 <!-- Newest first. One entry per run: date, day, status (done / partial / blocked), what changed, test results, blockers, next step. -->
+
+### 2026-10-20 — Day 5 — done
+- **Changed:** `rules.py` (finding codes, precedence: unusable evidence → conflicting evidence → status patterns → consistent; `RECONCILE_PAYMENT_CONFIRMATION` is allowed only for `ORDER_PAYMENT_MISMATCH` with an order intent ID to re-verify), `baseline.py` (template explanation + deterministic finding→runbook map), `runbooks.py` (front-matter loader that refuses `eval_only` files), `runbooks/RB-001…RB-005`, `runbooks_eval/RB-X01-injected-refund.md` (prompt-injection fixture, excluded from the image), `GET /api/v1/recovery/investigation-inputs/{id}/baseline?concern=PAYMENT|INVENTORY`, `scripts/recovery/rules_check.sh`, Dockerfile copies `runbooks/` only and sets `RUNBOOK_DIR`.
+- **Tests:** `uv run pytest` → 80 passed (33 new: all five seeded scenarios, precedence, two-payments conflict, amount-only conflict, `42.5` vs `42.50` not a conflict, missing order intent → abstain, other status combinations, baseline output, runbook corpus integrity, eval fixture isolation). `ruff` clean.
+- **Done-when:** `scripts/recovery/rules_check.sh` against the live services → S1 `ORDER_PAYMENT_MISMATCH` + `RECONCILE_PAYMENT_CONFIRMATION`; S2 `PAYMENT_AHEAD_OF_ORDER`; S3 `CONSISTENT`; S4 (concern INVENTORY) `INSUFFICIENT_EVIDENCE`; S5 `CONFLICTING_EVIDENCE`; `RULES OK`. No model provider in the agent log.
+- **Image:** `docker run … load_runbooks()` → the five RB-00x IDs from `/app/runbooks`; `/app/runbooks_eval` absent.
+- **Design note for Day 6:** S4's diagnosis depends on the operator's concern, not on the data — S4's records alone are consistent. The investigation request will need to carry the concern (free text mapped to `Concern`), and that mapping is a natural first job for the model.
+- **Next:** Day 6 — runbook ingestion into PGVector, retrieval, LangGraph read-only graph (facts → rules → retrieve → diagnose → validate), `POST/GET /investigations`.
 
 ### 2026-10-20 — Day 4 — done
 - **Java (read-only):** order-service `GET /api/v1/orders/admin/orders/{id}` (`ROLE_ADMIN`, `AdminOrderResponse` adds `stripePaymentIntentId` + `lastModifiedDate`); payment-service `GET /api/v1/payments/order/{orderId}/all` (every payment row — `order_id` is not unique) and `updatedAt` on `PaymentResponse`. Both compile; verified live through the S1/S5 checks below. No Java unit tests added (both services only have context-load tests).
