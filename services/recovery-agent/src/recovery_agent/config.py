@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -17,6 +17,13 @@ class Settings(BaseSettings):
 
     # Observer runs only when a broker is configured
     kafka_bootstrap_servers: str | None = None
+
+    # Without a key the service still investigates, returning the rules baseline only
+    openai_api_key: SecretStr | None = None
+    llm_model: str = "gpt-4o-mini"
+    embedding_model: str = "text-embedding-3-small"
+    embedding_dimensions: int = 1536
+    llm_timeout_seconds: float = 30.0
 
 
 @lru_cache

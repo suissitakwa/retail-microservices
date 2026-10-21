@@ -74,6 +74,27 @@ async def save_investigation_input(conn: AsyncConnection, input_id: UUID, order_
     return created_at
 
 
+async def save_investigation(conn: AsyncConnection, investigation_id: UUID, input_id: str, order_id: int,
+                             concern: str, requested_by: str, result: dict[str, Any], trace: dict[str, Any],
+                             latency_ms: int) -> datetime:
+    async with conn.cursor() as cur:
+        await cur.execute(
+            """INSERT INTO investigation (id, input_id, order_id, concern, requested_by, finding, model_used,
+                                          result, trace, latency_ms)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING created_at""",
+            (investigation_id, input_id, order_id, concern, requested_by, result["finding"],
+             result["modelUsed"], Jsonb(result), Jsonb(trace), latency_ms),
+        )
+        (created_at,) = await cur.fetchone()
+    return created_at
+
+
+async def load_investigation(conn: AsyncConnection, investigation_id: UUID) -> dict[str, Any] | None:
+    async with conn.cursor(row_factory=dict_row) as cur:
+        await cur.execute("SELECT * FROM investigation WHERE id = %s", (investigation_id,))
+        return await cur.fetchone()
+
+
 async def load_investigation_input(conn: AsyncConnection, input_id: UUID) -> dict[str, Any] | None:
     async with conn.cursor(row_factory=dict_row) as cur:
         await cur.execute("SELECT * FROM investigation_input WHERE id = %s", (input_id,))

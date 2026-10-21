@@ -36,3 +36,19 @@ CREATE TABLE IF NOT EXISTS investigation_input (
     snapshot      JSONB        NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_investigation_input_order ON investigation_input (order_id);
+
+-- One read-only investigation: the returned result plus everything needed to audit or score it
+CREATE TABLE IF NOT EXISTS investigation (
+    id            UUID         PRIMARY KEY,
+    input_id      UUID         NOT NULL REFERENCES investigation_input (id),
+    order_id      INT          NOT NULL,
+    concern       TEXT         NOT NULL,
+    requested_by  TEXT         NOT NULL,
+    created_at    TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    finding       TEXT         NOT NULL,
+    model_used    BOOLEAN      NOT NULL,
+    result        JSONB        NOT NULL,
+    trace         JSONB        NOT NULL,
+    latency_ms    INT          NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_investigation_order ON investigation (order_id);

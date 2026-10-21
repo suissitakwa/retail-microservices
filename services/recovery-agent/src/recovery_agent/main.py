@@ -1,9 +1,10 @@
 import asyncio
 import contextlib
 import logging
+import time
 from contextlib import asynccontextmanager
 from typing import Annotated
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Request, status
@@ -14,10 +15,14 @@ from recovery_agent.auth import ROLE_ADMIN, Principal, current_principal, requir
 from recovery_agent.baseline import baseline_result
 from recovery_agent.clients import ServiceClients, SourceForbidden
 from recovery_agent.config import get_settings
-from recovery_agent.db import apply_schema, load_investigation_input
+from recovery_agent.db import apply_schema, load_investigation, load_investigation_input, save_investigation
+from recovery_agent.diagnosis import OpenAIDiagnoser
 from recovery_agent.evidence import gather_investigation_input
+from recovery_agent.graph import GraphDeps, build_graph, trace
 from recovery_agent.observer import EventObserver, build_consumer
+from recovery_agent.retrieval import PgRunbookIndex, sqlalchemy_url
 from recovery_agent.rules import Concern, classify
+from recovery_agent.runbooks import load_runbooks
 
 log = logging.getLogger(__name__)
 
@@ -35,6 +40,21 @@ async def lifespan(app: FastAPI):
     app.state.pool = pool
     app.state.clients = ServiceClients(http, settings.order_service_url, settings.payment_service_url)
 
+    index, diagnoser = None, None
+    if settings.openai_api_key:
+        from langchain_openai import OpenAIEmbeddings
+
+        key = settings.openai_api_key.get_secret_value()
+        embeddings = OpenAIEmbeddings(model=settings.embedding_model, api_key=key,
+                                      dimensions=settings.embedding_dimensions)
+        index = await PgRunbookIndex.open(sqlalchemy_url(settings.database_url), embeddings,
+                                          settings.embedding_dimensions)
+        await index.sync(load_runbooks())
+        diagnoser = OpenAIDiagnoser(settings.llm_model, key, settings.llm_timeout_seconds)
+    else:
+        log.warning("OPENAI_API_KEY not set — no retrieval or model; investigations return the rules baseline")
+    app.state.graph = build_graph(GraphDeps(app.state.clients, pool, index, diagnoser))
+
     observer_task = None
     if settings.kafka_bootstrap_servers:
         observer = EventObserver(build_consumer(settings.kafka_bootstrap_servers), pool)
@@ -49,6 +69,8 @@ async def lifespan(app: FastAPI):
             observer_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await observer_task
+        if index:
+            await index.close()
         await http.aclose()
         await pool.close()
 
@@ -62,6 +84,10 @@ def get_pool(request: Request):
 
 def get_clients(request: Request) -> ServiceClients:
     return request.app.state.clients
+
+
+def get_graph(request: Request):
+    return request.app.state.graph
 
 
 @app.get("/health")
@@ -122,3 +148,52 @@ async def get_baseline(
     """Rules + template result for a stored input — no model call."""
     row = await _load_input(pool, input_id)
     return {"inputId": str(row["id"]), **baseline_result(row["order_id"], classify(row["snapshot"], concern))}
+
+
+class InvestigationRequest(BaseModel):
+    order_id: int = Field(alias="orderId", gt=0)
+    concern: Concern = Concern.PAYMENT
+
+
+def _investigation_body(row: dict) -> dict:
+    return {"id": str(row["id"]), "inputId": str(row["input_id"]), "concern": row["concern"],
+            "requestedBy": row["requested_by"], "createdAt": row["created_at"].isoformat(),
+            "latencyMs": row["latency_ms"], **row["result"]}
+
+
+@app.post("/api/v1/recovery/investigations", status_code=status.HTTP_201_CREATED)
+async def create_investigation(
+    body: InvestigationRequest,
+    principal: Annotated[Principal, Depends(require_role(ROLE_ADMIN))],
+    pool: Annotated[AsyncConnectionPool, Depends(get_pool)],
+    graph=Depends(get_graph),  # noqa: B008 — compiled graph has no useful type to annotate
+) -> dict:
+    start = time.perf_counter()
+    try:
+        state = await graph.ainvoke({"order_id": body.order_id, "concern": body.concern,
+                                     "token": principal.token, "requested_by": principal.email})
+    except SourceForbidden as e:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, f"{e.source} rejected the caller's token") from e
+    latency_ms = int((time.perf_counter() - start) * 1000)
+
+    investigation_id = uuid4()
+    async with pool.connection() as conn:
+        await save_investigation(conn, investigation_id, state["input"]["id"], body.order_id, body.concern.value,
+                                 principal.email, state["result"], trace(state), latency_ms)
+        row = await load_investigation(conn, investigation_id)
+    return _investigation_body(row)
+
+
+@app.get("/api/v1/recovery/investigations/{investigation_id}")
+async def get_investigation(
+    investigation_id: UUID,
+    _: Annotated[Principal, Depends(require_role(ROLE_ADMIN))],
+    pool: Annotated[AsyncConnectionPool, Depends(get_pool)],
+    include_trace: bool = False,
+) -> dict:
+    async with pool.connection() as conn:
+        row = await load_investigation(conn, investigation_id)
+    if row is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "investigation not found")
+    body = _investigation_body(row)
+    return {**body, "trace": row["trace"]} if include_trace else body
