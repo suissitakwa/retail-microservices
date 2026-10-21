@@ -5,7 +5,7 @@ Each run takes the first unchecked day. A day is checked only when its **Done wh
 - [x] Day 1 — ADR + reproduction
 - [x] Day 2 — Scenario seeds
 - [x] Day 3 — Service scaffold
-- [ ] Day 4 — Typed reads + evidence + event observer
+- [x] Day 4 — Typed reads + evidence + event observer
 - [ ] Day 5 — Rules + baseline + runbooks
 - [ ] Day 6 — Retrieval + structured diagnosis
 - [ ] Day 7 — Eval set
@@ -20,6 +20,16 @@ Each run takes the first unchecked day. A day is checked only when its **Done wh
 ## Log
 
 <!-- Newest first. One entry per run: date, day, status (done / partial / blocked), what changed, test results, blockers, next step. -->
+
+### 2026-10-20 — Day 4 — done
+- **Java (read-only):** order-service `GET /api/v1/orders/admin/orders/{id}` (`ROLE_ADMIN`, `AdminOrderResponse` adds `stripePaymentIntentId` + `lastModifiedDate`); payment-service `GET /api/v1/payments/order/{orderId}/all` (every payment row — `order_id` is not unique) and `updatedAt` on `PaymentResponse`. Both compile; verified live through the S1/S5 checks below. No Java unit tests added (both services only have context-load tests).
+- **Python:** `models.py` (typed records with evidence IDs `order:<id>`, `payment:<id>`, `event:<topic>/<partition>/<offset>`), `clients.py` (httpx, forwards the caller's token; 404 → `not_found`, 5xx/timeout/malformed → `unavailable`, 401/403 → raised, never treated as missing), `schema.sql` + `db.py` (`event_log` with `UNIQUE(topic, partition, offset)`, `observer_partition` with first offset + `observed_since`, `investigation_input` snapshots), `observer.py` (offsets committed only after the DB transaction; redelivery is a no-op; unparseable payloads stored raw; retries until the broker is reachable), `evidence.py`, endpoints `POST/GET /api/v1/recovery/investigation-inputs` (`ROLE_ADMIN`).
+- **Tests:** `uv run pytest` → 47 passed (respx client tests; observer and evidence tests against real Postgres in a throwaway schema per test, incl. "offsets committed only after rows are visible from another connection", redelivery no-op, failed write → no offset commit). `ruff` clean.
+- **Done-when:** `scripts/recovery/seed.sh` then `scripts/recovery/investigation_input_check.sh 800001` → stored `order:800001` (COMPLETED, `pi_rcv_s1`) + `payment:18` (PENDING, no intent), `INVESTIGATION INPUT STORED`. S5 (`800005`) stored `order:800005` intent `pi_rcv_s5_a` vs `payment:22` intent `pi_rcv_s5_b` — the conflict is visible in the evidence.
+- **Observed behaviour worth keeping:** the very first S1 call hit 5 s read timeouts on freshly started JVMs; the snapshot correctly recorded both sources as `unavailable` (not "order missing"). Day 6 should treat an all-unavailable input as `NEEDS_MANUAL_REVIEW` / retry, never as a diagnosis.
+- **Not verified:** the observer against a real broker — the existing `kafka` container hung at "Configuring" (old Confluent image waiting on its startup checks); stopped after the timebox. Event history is therefore `unavailable` in live snapshots. Container build verified: schema applied on startup, app healthy, observer retries `kafka:9092` instead of dying.
+- **Security finding (for Day 10):** payment-service `SecurityConfig` has `anyRequest().permitAll()` — every payment endpoint, including `PATCH /{id}/confirm` and `/fail`, is callable without a token.
+- **Next:** Day 5 — deterministic rules + template baseline + runbooks.
 
 ### 2026-10-19 — Day 3 — done
 - **Changed:** `services/recovery-agent/` (pyproject + uv.lock, FastAPI app, `auth.py`, `config.py`, Dockerfile, tests), `docker-compose.yml` (`recovery-db` pgvector on 5439, `recovery-agent` on 8088, `RECOVERY_AGENT_URL` for the gateway), `configurations/api-gateway.yml` (recovery route + prefix fix), `scripts/recovery/gateway_auth_check.sh`, README.
