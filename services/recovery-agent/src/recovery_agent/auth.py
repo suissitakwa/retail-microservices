@@ -1,6 +1,6 @@
 """Stateless validation of tokens issued by customer-service (the only JWT issuer)."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Annotated, Any
 
 import jwt
@@ -18,6 +18,8 @@ _bearer = HTTPBearer(auto_error=False)
 class Principal:
     email: str
     roles: frozenset[str]
+    # Raw token, forwarded to downstream services so reads run with the caller's own rights
+    token: str = field(default="", repr=False, compare=False)
 
     def has_role(self, role: str) -> bool:
         return role in self.roles
@@ -52,7 +54,7 @@ def decode_token(token: str, settings: Settings) -> Principal:
     except jwt.InvalidTokenError as e:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid token",
                             headers={"WWW-Authenticate": "Bearer"}) from e
-    return Principal(email=claims["sub"], roles=extract_roles(claims.get("role")))
+    return Principal(email=claims["sub"], roles=extract_roles(claims.get("role")), token=token)
 
 
 def current_principal(
