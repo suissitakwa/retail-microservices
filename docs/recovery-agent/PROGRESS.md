@@ -8,7 +8,7 @@ Each run takes the first unchecked day. A day is checked only when its **Done wh
 - [x] Day 4 — Typed reads + evidence + event observer
 - [x] Day 5 — Rules + baseline + runbooks
 - [x] Day 6 — Retrieval + structured diagnosis
-- [ ] Day 7 — Eval set
+- [x] Day 7 — Eval set
 - [ ] Day 8 — Eval runner + benchmark
 - [ ] Day 9 — Java: recovery request + idempotency
 - [ ] Day 10 — Java: atomic transition
@@ -20,6 +20,15 @@ Each run takes the first unchecked day. A day is checked only when its **Done wh
 ## Log
 
 <!-- Newest first. One entry per run: date, day, status (done / partial / blocked), what changed, test results, blockers, next step. -->
+
+### 2026-10-26 — Day 7 — done
+- **Changed:** `evaluation/cases.py` (Pydantic `EvalCase` schema + loader), `eval/cases/dev.jsonl` (20), `eval/cases/heldout.jsonl` (15), `eval/cases/heldout.sha256`, `eval/README.md`, `runbooks_eval/RB-X02-injected-reconcile-conflict.md` (second injection fixture, held-out only), `.dockerignore` excludes `eval/` and `runbooks_eval/`.
+- **Coverage:** every category in both splits — mismatch 3/2, payment_ahead 1/1, consistent 3/2, conflict 3/2, insufficient 5/3, not_found 1/1, unsupported 1/1, injection 2/2 (one runbook-borne + one record-borne per split), unauthorized 1/1. Dev and held-out share no order or record IDs.
+- **Case contract:** verdict (`finding`, `action`, `manual_review`), acceptable `runbook_ids`, `required_evidence`, faithfulness `must_mention` any-of groups and `must_not_mention` phrases, optional `injected_runbooks`. `dev-015` is a regression for the Day 6 S4 explanation that blamed event records.
+- **Tests:** `uv run pytest` → 154 passed (55 new: split sizes and coverage, no ID overlap, held-out hash pinned and CRLF-safe, labels agree with the rules for all 33 201-cases, expected runbooks exist, injected fixtures are eval-only, no case content in indexed chunks, eval excluded from the image, 9 schema rejections, wrong-split and duplicate-ID loader errors). `ruff` clean.
+- **Done-when:** all 35 cases validate against the schema; held-out excluded from retrieval (corpus is `runbooks/` only, chunk text contains no case IDs, titles, `EVAL-` refs or `pi_eval` intents; eval dirs not in the image). Freeze verified by editing one held-out amount → hash test fails with the frozen-file message; restored → passes.
+- **Honest caveat:** the verdict labels encode the design spec in `rules.py`, so the rules baseline scores 100% on finding/action by construction. Day 8's model-vs-baseline comparison is meaningful on explanation faithfulness, citations, runbook choice and injection resistance — not on the verdict.
+- **Next:** Day 8 — eval runner (offline replay through rules → retrieve → diagnose → validate), metrics, `make eval` → `docs/recovery-agent/benchmark.md`.
 
 ### 2026-10-21 — Day 6 — done
 - **Changed:** `retrieval.py` (one chunk per `##` section, content-derived chunk IDs, incremental sync into `PGVectorStore` v2 via our own SQLAlchemy `AsyncEngine`), `diagnosis.py` (strict `DiagnosisOutput` schema, system prompt that marks runbooks as untrusted, `validate()`, `OpenAIDiagnoser` with `json_schema` strict mode), `graph.py` (LangGraph `StateGraph`: facts → rules → retrieve → diagnose → validate, per-node timings, trace), `investigation` table, `POST /api/v1/recovery/investigations` + `GET …/{id}?include_trace=true`, config for model/embeddings (no key → rules baseline only), `scripts/recovery/investigate.sh`. Deps: langgraph 1.2, langchain-openai 1.7, langchain-postgres 0.0.19, langchain-text-splitters 1.1.
