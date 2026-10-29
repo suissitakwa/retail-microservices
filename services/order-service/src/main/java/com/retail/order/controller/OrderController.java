@@ -1,6 +1,7 @@
 package com.retail.order.controller;
 
 import com.retail.order.enums.OrderStatus;
+import com.retail.order.response.AdminOrderResponse;
 import com.retail.order.response.CheckoutResponse;
 import com.retail.order.response.OrderResponse;
 import com.retail.order.service.OrderService;
@@ -44,6 +45,12 @@ public class OrderController {
     @GetMapping("/admin/orders")
     public List<OrderResponse> allOrders() {
         return orderService.getAllOrders();
+    }
+
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @GetMapping("/admin/orders/{orderId}")
+    public AdminOrderResponse adminOrder(@PathVariable Integer orderId) {
+        return orderService.getOrderForAdmin(orderId);
     }
 
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")

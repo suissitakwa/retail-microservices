@@ -15,5 +15,6 @@ public record PaymentResponse(
         String orderReference,
         String stripeSessionId,
         String stripePaymentIntentId,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        LocalDateTime updatedAt
 ) {}

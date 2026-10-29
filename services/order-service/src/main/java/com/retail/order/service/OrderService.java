@@ -11,6 +11,7 @@ import com.retail.order.kafka.OrderEventItem;
 import com.retail.order.kafka.OrderProducer;
 import com.retail.order.repository.CartRepository;
 import com.retail.order.repository.OrderRepository;
+import com.retail.order.response.AdminOrderResponse;
 import com.retail.order.response.CheckoutResponse;
 import com.retail.order.response.OrderItemResponse;
 import com.retail.order.response.OrderResponse;
@@ -138,6 +139,14 @@ public class OrderService {
         return orderRepository.findAll().stream().map(this::toResponse).toList();
     }
 
+    public AdminOrderResponse getOrderForAdmin(Integer orderId) {
+        Order o = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found: " + orderId));
+        return new AdminOrderResponse(o.getId(), o.getReference(), o.getCustomerId(), o.getTotalAmount(),
+                o.getStatus(), o.getStripeSessionId(), o.getStripePaymentIntentId(), toItems(o),
+                o.getCreatedDate(), o.getLastModifiedDate());
+    }
+
     @Transactional
     public void updateStatus(Integer orderId, OrderStatus newStatus) {
         Order order = orderRepository.findById(orderId)
@@ -187,10 +196,13 @@ public class OrderService {
     // ── Mapper ───────────────────────────────────────────────────────────────
 
     private OrderResponse toResponse(Order o) {
-        List<OrderItemResponse> items = o.getOrderItems().stream()
+        return new OrderResponse(o.getId(), o.getReference(), o.getCustomerId(),
+                o.getTotalAmount(), o.getStatus(), o.getStripeSessionId(), toItems(o), o.getCreatedDate());
+    }
+
+    private List<OrderItemResponse> toItems(Order o) {
+        return o.getOrderItems().stream()
                 .map(i -> new OrderItemResponse(i.getId(), i.getProductId(), i.getProductName(), i.getQuantity(), i.getPrice()))
                 .toList();
-        return new OrderResponse(o.getId(), o.getReference(), o.getCustomerId(),
-                o.getTotalAmount(), o.getStatus(), o.getStripeSessionId(), items, o.getCreatedDate());
     }
 }
