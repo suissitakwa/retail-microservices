@@ -56,6 +56,9 @@ def _timed(name: str, fn):
 
 def build_graph(deps: GraphDeps):
     async def facts(s: InvestigationState) -> dict:
+        if "input" in s:
+            # Replay of a frozen snapshot (evaluation): never re-read live services
+            return {}
         snapshot = await gather_investigation_input(s["order_id"], s["token"], s["requested_by"],
                                                     deps.clients, deps.pool)
         return {"input": snapshot}
@@ -98,8 +101,9 @@ def build_graph(deps: GraphDeps):
             "evidenceIds": out.evidence_ids,
             "runbookId": out.runbook_id,
             "recommendedAction": out.recommended_action.value if out.recommended_action else None,
-            # Manual review is decided by the rules and by the model declining to act — never relaxed
-            "requiresManualReview": finding.requires_manual_review or out.recommended_action is None,
+            # Decided by the rules, and by the model declining an action the rules allowed — never relaxed
+            "requiresManualReview": finding.requires_manual_review
+                                    or (finding.allowed_action is not None and out.recommended_action is None),
             "uncertainty": out.uncertainty,
             "source": "model",
             "modelUsed": True,
