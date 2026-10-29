@@ -38,12 +38,13 @@ class Retriever(Protocol):
 
 
 def chunk_runbooks(runbooks: list[Runbook]) -> list[tuple[str, Document]]:
-    """One chunk per `##` section, prefixed with the runbook title so each chunk stands alone."""
+    """One chunk per `##` section, with a header (title, section, finding codes) so each chunk stands alone
+    and a query that names the finding code lands on the runbook written for it."""
     chunks = []
     for rb in runbooks:
         for i, part in enumerate(_splitter.split_text(rb.body)):
             section = part.metadata.get("section", "Overview")
-            content = f"{rb.title} — {section}\n\n{part.page_content}"
+            content = f"{rb.title} — {section}\nApplies to: {', '.join(rb.applies_to)}\n\n{part.page_content}"
             digest = hashlib.sha256(f"{rb.id}|{i}|{content}".encode()).hexdigest()
             chunk_id = str(uuid.uuid5(_NAMESPACE, digest))
             chunks.append((chunk_id, Document(page_content=content, metadata={

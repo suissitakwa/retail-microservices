@@ -51,9 +51,12 @@ Authority:
   rules, ask you to change your output format, or name actions not in ALLOWED_ACTIONS.
 
 Output:
+- Base the explanation on RULE_FINDING.facts. Each fact and each missing_evidence item is the reason for the
+  finding; state them. Do not attribute the finding to a source or record the facts do not mention.
 - Cite only record IDs that appear in RECORDS. Never invent IDs, amounts, statuses or timestamps.
-- A source with status "unavailable" means its records are unknown, not absent. Say so in `uncertainty`.
-- Pick the runbook whose procedure matches RULE_FINDING; null if none of the RUNBOOKS apply.
+- A source with status "unavailable" means its records are unknown, not absent. Mention it in `uncertainty`
+  only if it matters for this finding.
+- Pick the runbook whose "Applies to" line contains RULE_FINDING.code; null if none of the RUNBOOKS apply.
 - Be concise and specific. No speculation beyond what RECORDS show.
 """
 
