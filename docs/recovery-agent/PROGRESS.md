@@ -9,7 +9,7 @@ Each run takes the first unchecked day. A day is checked only when its **Done wh
 - [x] Day 5 — Rules + baseline + runbooks
 - [x] Day 6 — Retrieval + structured diagnosis
 - [x] Day 7 — Eval set
-- [ ] Day 8 — Eval runner + benchmark
+- [x] Day 8 — Eval runner + benchmark
 - [ ] Day 9 — Java: recovery request + idempotency
 - [ ] Day 10 — Java: atomic transition
 - [ ] Day 11 — Approval
@@ -20,6 +20,16 @@ Each run takes the first unchecked day. A day is checked only when its **Done wh
 ## Log
 
 <!-- Newest first. One entry per run: date, day, status (done / partial / blocked), what changed, test results, blockers, next step. -->
+
+### 2026-10-28 — Day 8 — done
+- **Changed:** `evaluation/scoring.py` (pure per-case scorer + aggregate), `evaluation/run.py` (offline replay, two arms, eval-only runbooks injected first, customer cases through the real HTTP layer, refuses held-out without `--confirm-heldout` or with a hash mismatch, writes `eval/results/<split>-<timestamp>.json` with commit, model and case-file hash), `evaluation/report.py` → `docs/recovery-agent/benchmark.md` generated only from result files, `Makefile` (`eval-dev`, `eval-heldout`, `benchmark`), graph `facts` node skips live reads when a frozen snapshot is supplied.
+- **Tests:** `uv run pytest` → 166 passed (12 new incl. the baseline arm over all 20 dev cases offline and a regression for the bug below). `ruff` clean.
+- **Dev run 1 (`dev-20261029T002020Z`) found:** (1) a real bug — the model arm flagged *consistent* orders for manual review whenever the model correctly declined to act (dev-005/006/007); fixed so declining only forces review when the rules allowed an action. (2) Wrong runbook on dev-006/dev-014 — chunks didn't carry the finding code; added an `Applies to:` line to every chunk header. (3) dev-015 faithfulness failure again (blamed missing event records) — prompt now requires grounding the explanation in `RULE_FINDING.facts` / `missing_evidence`. All three tuned on dev only.
+- **Dev run 3 (`dev-20261029T003138Z`, commit `3e0eec3`):** baseline and model both 20/20 status, 19/19 verdict, 0 unsafe actions, 19/19 valid evidence, 17/17 required evidence, 10/10 faithful, 2/2 injections resisted; runbook 16/16 baseline vs 15/16 model (dev-014: model cited none). 0/19 model outputs rejected. Model latency p50 2194 ms / p95 2958 ms (offline, excludes service reads), 1427 in / 120 out tokens per call. (Run 2 was on uncommitted code and is kept only as history.)
+- **Held-out — single run (`heldout-20261029T003241Z`, commit `3e0eec3`):** baseline and model identical: 15/15 status, 14/14 verdict, 0/14 unsafe actions, 14/14 valid evidence, 12/12 required evidence, 11/11 runbook, 2/3 faithful, 5/5 no forbidden claims, 2/2 injections resisted (incl. the unseen RB-X02 fixture and the refund instruction in an order reference), 0/14 rejected. The faithfulness miss is ho-001 in **both** arms: neither explanation states the 1249.00 amount at stake. Held-out is frozen, so it stays a reported miss.
+- **What the numbers say:** on these 35 cases the model adds **no measurable improvement** over the rules + template baseline on any metric — it matches it, at ~2.2 s and ~1.5k tokens per call. Safety held in every case (validation never had to reject an output; injections were resisted by the model itself). Design rule 10 says to return the deterministic result where the model adds no value; whether to switch the default, or to add cases that test what the model is for (free-text questions, multi-record narratives), is an open decision.
+- **Known gap:** Makefile and scripts get CRLF on checkout in this repo (`core.autocrlf`); a repo-level `.gitattributes` (`eol=lf` for `*.sh`, `Makefile`, `mvnw`) would fix this and the `mvnw` problem together.
+- **Next:** Day 9 — order-service `recovery_request`, `POST /internal/recoveries`, `GET /internal/recoveries/{key}`, idempotency key bound to a request hash, `UNIQUE(order_id, action)` for active rows, Stripe re-verification.
 
 ### 2026-10-26 — Day 7 — done
 - **Changed:** `evaluation/cases.py` (Pydantic `EvalCase` schema + loader), `eval/cases/dev.jsonl` (20), `eval/cases/heldout.jsonl` (15), `eval/cases/heldout.sha256`, `eval/README.md`, `runbooks_eval/RB-X02-injected-reconcile-conflict.md` (second injection fixture, held-out only), `.dockerignore` excludes `eval/` and `runbooks_eval/`.
